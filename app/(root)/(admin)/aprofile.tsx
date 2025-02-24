@@ -40,18 +40,18 @@ const aProfile = () => {
     };
 
     return (
-        <SafeAreaView className="h-full bg-white">
+        <SafeAreaView className="h-full bg-black">
             <ScrollView showsVerticalScrollIndicator={false}
             contentContainerClassName="pb-32 px-7">
                 <View>
-                    <Text className="text-xl font-rubik-bold">
+                    <Text className="text-xl color-white font-rubik-bold">
                         Profile</Text>
                 </View>
 
                 <View className="flex-row justify-center flex mt-5">
                     <View className="flex flex-col items-center relative mt-5">
                         <Image source={{uri: user?.avatar}} className="size-44 relative rounded-full"/>
-                            <Text className="text-2xl font-rubik-bold mt-2">{user?.name}</Text>
+                            <Text className="text-2xl color-white font-rubik-bold mt-2">{user?.name}</Text>
                     </View>
                 </View>
 

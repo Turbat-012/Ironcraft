@@ -3,6 +3,7 @@ import * as Linking from 'expo-linking';
 import { openAuthSessionAsync } from "expo-web-browser";
 import { red } from "react-native-reanimated/lib/typescript/Colors";
 import hours from "@/app/(root)/(tabs)/hours";
+import { Float } from "react-native/Libraries/Types/CodegenTypes";
 
 export const config = {
     platform: "com.jsm.ironcraft",
@@ -95,8 +96,13 @@ export async function getCurrentUser() {
       }
     }
   } catch (error) {
-    console.error(error);
-    return null;
+    if (error.code === 401) {
+      // User is not authenticated, return null
+      return null;
+    } else {
+      console.error(error);
+      return null;
+    }
   }
 }
 
@@ -110,7 +116,7 @@ export const createUser = async (email: string, password: string, name: string) 
       const newUser = await databases.createDocument(
         config.databaseId!,
         config.contractorCollectionId!,
-        ID.unique(),
+        newAccount.$id,
         {
           contractor_id: newAccount.$id,
           email,
@@ -127,24 +133,24 @@ export const createUser = async (email: string, password: string, name: string) 
     }
 };
 
-export const logHours = async (contractorId: string, hours: string, date: string) => {
-    try {
-        const newLog = await databases.createDocument(
-            config.databaseId!,
-            config.hoursCollectionId!,
-            ID.unique(), // Generates a unique ID for the new document
-            {
-                contractor_id: contractorId,
-                hours,
-                date,
-            }
-        );
+export const logHours = async (contractorId: string, hours: Float, date: string) => {
+  try {
+    const newLog = await databases.createDocument(
+      config.databaseId!,
+      config.hoursCollectionId!,
+      ID.unique(), // Generates a unique ID for the new document
+      {
+        contractor_id: contractorId,
+        hours,
+        date,
+      }
+    );
 
-        return newLog; // newLog now contains the created document's details, including $id
-    } catch (error) {
-        console.log(error);
-        throw new Error(error as string);
-    }
+    return newLog; // newLog now contains the created document's details, including $id
+  } catch (error) {
+    console.log(error);
+    throw new Error(error as string);
+  }
 };
 
 export const getJobsiteForTomorrow = async (contractorId: string) => {
@@ -174,11 +180,11 @@ export const getLoggedHours = async (contractorId: string, startDate: string, en
     try {
       const response = await databases.listDocuments(
         config.databaseId!,
-        'hours', // Collection ID for hours
+        config.hoursCollectionId!, // Collection ID for hours
         [
-          `contractor_id=${contractorId}`,
-          `date>=${startDate}`,
-          `date<=${endDate}`
+          Query.equal('contractor_id', contractorId),
+          Query.greaterThanEqual('date', startDate),
+          Query.lessThanEqual('date', endDate)
         ]
       );
   

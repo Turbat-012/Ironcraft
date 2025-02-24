@@ -34,11 +34,7 @@ const SignIn = () => {
             const result = await login(form.email, form.password);
             if(result){
                 refetch();
-            }
-    
-            //set it to global state...
-    
-            router.replace('../(tabs)/logging');
+            } 
           } catch (error) {
             Alert.alert('Error', error.message);        
           } finally {
@@ -50,17 +46,17 @@ const SignIn = () => {
     }//else if(!loading && isLoggedIn && user?.privilege === "admin") {return <Redirect href="../(admin/assign" />;}
 
     return (
-        <SafeAreaView className="bg-white h-full">
+        <SafeAreaView className="bg-black h-full">
             <ScrollView contentContainerClassName="h-full">
                 <View className="w-full justify-center min-h-[60vh] px-4 my-6">
-                    <Text className="text-base text-center uppercase font-rubik text-black-200">
+                    <Text className="text-base text-center uppercase font-rubik color-white">
                         Welcome to Ironcraft</Text>
 
-                    <Text className="text-3xl font-rubik-bold text-black-300 text-center mt-2">
+                    <Text className="text-3xl font-rubik-bold color-white text-center mt-2">
                         Let's get logging!
                     </Text>
 
-                    <Text className="text-lg font-rubik text-black-200 text-center mt-12">
+                    <Text className="text-lg font-rubik color-white text-center mt-12">
                         Sign in to your account
                     </Text>
 
@@ -88,7 +84,7 @@ const SignIn = () => {
                         </Text>
                         <Link href="/sign-up" className='text-lg text-blue-500 font-rubik'>Activate!</Link>
                     </View>
-                    <View>
+                    <View className="pt-2 items-center">
                     <Link href="/password-recovery" className='text-lg text-blue-500 font-rubik'>Forgot Password?</Link>
                     </View>
 

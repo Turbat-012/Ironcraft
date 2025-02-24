@@ -22,7 +22,7 @@ const TabsLayout = () => {
         screenOptions={{
             tabBarShowLabel: false,
             tabBarStyle: {  
-                backgroundColor: 'white',
+                backgroundColor: 'black',
                 position: 'absolute',
                 borderTopColor: '#0061FF1A',
                 borderTopWidth: 1,
@@ -31,7 +31,7 @@ const TabsLayout = () => {
         }}    
     >
         <Tabs.Screen
-            name="assign"
+            name="index"
             options={{
                 title:"Assign",
                 headerShown: false,
@@ -71,6 +71,20 @@ const TabsLayout = () => {
                 )
             }}
         />
+
+        <Tabs.Screen
+            name="contractors"
+            options={{
+                title:"Contractors",
+                headerShown: false,
+                tabBarIcon: ({ focused}) => (
+                    <View>
+                        <TabIcon icon={icons.people} 
+                        focused={focused} title="Contractors" />
+                    </View>
+                )
+            }}
+        />      
         
         <Tabs.Screen
             name="aprofile"
@@ -83,6 +97,15 @@ const TabsLayout = () => {
                         focused={focused} title="Profile" />
                     </View>
                 )
+            }}
+        />
+        
+        <Tabs.Screen
+            name="EditJobsite"
+            options={{
+                title: "Edit Jobsite",
+                headerShown: false,
+                href: null
             }}
         />
     </Tabs>    

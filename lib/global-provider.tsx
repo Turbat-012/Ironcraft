@@ -24,9 +24,8 @@ interface GlobalContextType {
     isLoggedIn: boolean;
     user: User | null;
     loading: boolean;  
-    refetch: () => void; 
-    //refetch: (newParams?: Record<string, string | number>) =>
-        //Promise<void>; 
+    //refetch: () => void; 
+    refetch: (newParams?: Record<string, string | number>) => Promise<void>; 
 }
 
 const GlobalContext = createContext<GlobalContextType | undefined>(undefined);

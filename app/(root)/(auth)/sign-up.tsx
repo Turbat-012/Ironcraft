@@ -30,10 +30,9 @@ const SignUp = () => {
 
       try {
         const result = await createUser(form.email, form.password, form.name);
-
-        //set it to global state...
-
-        router.replace('../(tabs)/logging');
+        if(result){
+            refetch();
+        }
       } catch (error) {
         Alert.alert('Error', error.message);        
       } finally {
@@ -42,17 +41,17 @@ const SignUp = () => {
     }
 
     return (
-        <SafeAreaView className="bg-white h-full">
+        <SafeAreaView className="bg-black h-full">
             <ScrollView contentContainerClassName="h-full">
                 <View className="w-full justify-center min-h-[60vh] px-4 my-6">
-                    <Text className="text-base text-center uppercase font-rubik text-black-200">
+                    <Text className="text-base text-center uppercase font-rubik color-white">
                         Welcome to Ironcraft</Text>
 
-                    <Text className="text-3xl font-rubik-bold text-black-300 text-center mt-2">
+                    <Text className="text-3xl font-rubik-bold color-white text-center mt-2">
                         Let's get started!
                     </Text>
 
-                    <Text className="text-lg font-rubik text-black-200 text-center mt-12">
+                    <Text className="text-lg font-rubik color-white text-center mt-12">
                         Activate your Ironcraft account!
                     </Text>
                     

@@ -8,6 +8,7 @@ import userRole from "@/lib/appwrite";
 
 export default function AppLayout() {
   const { refetch, user, loading, isLoggedIn } = useGlobalContext();
+  //const { user, loading, isLoggedIn } = useGlobalContext();
   const router = useRouter();
 
   useEffect(() => {

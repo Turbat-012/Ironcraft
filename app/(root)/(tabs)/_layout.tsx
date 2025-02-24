@@ -22,7 +22,7 @@ const TabsLayout = () => {
         screenOptions={{
             tabBarShowLabel: false,
             tabBarStyle: {  
-                backgroundColor: 'white',
+                backgroundColor: 'black',
                 position: 'absolute',
                 borderTopColor: '#0061FF1A',
                 borderTopWidth: 1,

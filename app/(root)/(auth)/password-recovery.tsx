@@ -46,10 +46,10 @@ const PasswordRecovery = () => {
   };
 
   return (
-    <SafeAreaView className="bg-white h-full">
+    <SafeAreaView className="bg-black h-full">
       <ScrollView contentContainerClassName="h-full">
         <View className="w-full justify-center min-h-[60vh] px-4 my-6">
-          <Text className="text-3xl font-rubik-bold text-black-300 text-center mt-2">
+          <Text className="text-3xl font-rubik-bold color-white text-center mt-2">
             Password Recovery
           </Text>
           <FormField
