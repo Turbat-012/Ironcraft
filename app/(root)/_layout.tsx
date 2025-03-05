@@ -13,14 +13,14 @@ export default function AppLayout() {
 
   useEffect(() => {
     if (!loading) {
-      if (isLoggedIn && user?.privilege != "admin") {
-        router.replace("../(tabs)/hours"); // Redirect to the main screen if logged in
-      }
-      if (isLoggedIn && user?.privilege === "admin"){
-        router.replace("../(admin)/aprofile"); //Redirect to Admin tabs
-      }
-       else {
-        router.replace("../(auth)/sign-in"); // Redirect to the sign-in screen if not logged in
+      if (isLoggedIn) {
+        if (user?.privilege === "admin") {
+          router.replace("../(admin)/aprofile"); // Redirect to Admin tabs
+        } else {
+          router.replace("../(tabs)/hours"); // Redirect non-admin users to hours
+        }
+      } else {
+        router.replace("../(auth)/sign-in"); // Redirect to sign-in if not logged in
       }
     }
   }, [loading, isLoggedIn]);

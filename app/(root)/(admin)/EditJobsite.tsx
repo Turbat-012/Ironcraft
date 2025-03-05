@@ -3,7 +3,7 @@ import { View, Text, Button, Alert, StyleSheet, ScrollView, TouchableOpacity } f
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { databases } from '@/lib/appwrite';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Query } from 'react-native-appwrite';
+import { Query, ID } from 'react-native-appwrite';
 import CustomButton from '@/components/CustomButton';
 
 export const config = {
@@ -71,41 +71,40 @@ const EditJobsite = () => {
   };
 
   const handleContractorSelection = (contractorId: string) => {
-    setSelectedContractors((prev) => {
+    setSelectedContractors(prev => {
       if (prev.includes(contractorId)) {
         return prev.filter(id => id !== contractorId);
-      } else {
-        return [...prev, contractorId];
       }
+      return [...prev, contractorId];
     });
   };
 
-  const handleUpdate = async () => {
+  const handleSave = async () => {
     setLoading(true);
     try {
-      // Delete existing assignments for this jobsite
-      const existingAssignments = await databases.listDocuments(
-        process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID!,
-        process.env.EXPO_PUBLIC_APPWRITE_ASSIGNMENT_COLLECTION_ID!,
-        [Query.equal('job_site_id', jobsiteId)]
+      // Delete existing unposted assignments
+      const currentAssignments = await databases.listDocuments(
+        config.databaseId!,
+        config.assignmentCollectionId!,
+        [Query.equal('job_site_id', jobsiteId), Query.equal('posted', false)]
       );
 
-      const deletePromises = existingAssignments.documents.map(assignment =>
-        databases.deleteDocument(
-          process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID!,
-          process.env.EXPO_PUBLIC_APPWRITE_ASSIGNMENT_COLLECTION_ID!,
-          assignment.$id
+      await Promise.all(
+        currentAssignments.documents.map(assignment =>
+          databases.deleteDocument(
+            config.databaseId!,
+            config.assignmentCollectionId!,
+            assignment.$id
+          )
         )
       );
-
-      await Promise.all(deletePromises);
 
       // Create new assignments
       const createPromises = selectedContractors.map(contractorId =>
         databases.createDocument(
-          process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID!,
-          process.env.EXPO_PUBLIC_APPWRITE_ASSIGNMENT_COLLECTION_ID!,
-          'unique()',
+          config.databaseId!,
+          config.assignmentCollectionId!,
+          ID.unique(),
           {
             contractor_id: contractorId,
             job_site_id: jobsiteId,
@@ -116,12 +115,11 @@ const EditJobsite = () => {
       );
 
       await Promise.all(createPromises);
-
-      Alert.alert('Success', 'Contractor assignments updated successfully.');
+      Alert.alert('Success', 'Contractors assigned successfully');
       router.back();
     } catch (error) {
-      console.error('Error updating assignments:', error);
-      Alert.alert('Error', 'Failed to update contractor assignments.');
+      console.error('Error saving assignments:', error);
+      Alert.alert('Error', 'Failed to save assignments');
     } finally {
       setLoading(false);
     }
@@ -149,7 +147,7 @@ const EditJobsite = () => {
       </ScrollView>
       <CustomButton 
         title={loading ? 'Updating...' : 'Update Assignments'} 
-        handlePress={handleUpdate}
+        handlePress={handleSave}
         containerStyles="mt-7 bg-blue-500"
         isLoading={loading}
         textStyles={undefined}

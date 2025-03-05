@@ -1,11 +1,13 @@
-import { View, Text, Button, Alert, FlatList, StyleSheet } from 'react-native';
+import { View, Text, Button, Alert, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { databases } from '@/lib/appwrite';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Query } from 'react-native-appwrite';
 import { useRouter } from 'expo-router';
 import CustomButton from '@/components/CustomButton';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { Platform } from 'react-native';
 
 export const config = {
   platform: "com.jsm.ironcraft",
@@ -70,6 +72,51 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 8,
   },
+  dateSection: {
+    backgroundColor: '#1e1e1e',
+    padding: 16,
+    marginBottom: 20,
+    borderRadius: 8,
+  },
+  dateLabel: {
+    color: '#ffffff',
+    fontSize: 16,
+    marginBottom: 8,
+  },
+  dateValue: {
+    color: '#0061ff',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  datePicker: {
+    marginTop: 10,
+    backgroundColor: '#333',
+  },
+  contractorSelection: {
+    marginTop: 10,
+  },
+  label: {
+    color: 'white',
+    fontSize: 14,
+    marginBottom: 4,
+  },
+  contractorList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  contractorItem: {
+    backgroundColor: '#333',
+    padding: 8,
+    borderRadius: 4,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  selectedContractorItem: {
+    backgroundColor: '#0061ff',
+  },
+  contractorName: {
+    color: 'white',
+  },
 });
 
 const Assign = () => {
@@ -77,13 +124,18 @@ const Assign = () => {
   const [loading, setLoading] = useState(true);
   const [contractorsMap, setContractorsMap] = useState<{ [key: string]: string[] }>({});
   const [loadingContractors, setLoadingContractors] = useState<{ [key: string]: boolean }>({});
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [expandedDate, setExpandedDate] = useState(false);
   const router = useRouter();
 
-  useEffect(() => {
-    fetchJobsites();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      fetchJobsites();
+    }, [])
+  );
 
   const fetchJobsites = async () => {
+    setLoading(true);
     try {
       const response = await databases.listDocuments(
         config.databaseId!,
@@ -91,20 +143,17 @@ const Assign = () => {
       );
       setJobsites(response.documents);
       
-      // Initialize loading states for each jobsite
-      const loadingStates = response.documents.reduce((acc: any, jobsite) => {
-        acc[jobsite.$id] = true;
-        return acc;
-      }, {});
-      setLoadingContractors(loadingStates);
-
-      // Load contractors for each jobsite
+      // Refresh contractors for each jobsite
       response.documents.forEach((jobsite) => {
+        setLoadingContractors(prev => ({
+          ...prev,
+          [jobsite.$id]: true
+        }));
         loadAssignedContractors(jobsite.$id);
       });
     } catch (error) {
       console.error('Error fetching jobsites:', error);
-      Alert.alert('Error', 'Failed to fetch jobsites.');
+      Alert.alert('Error', 'Failed to fetch jobsites');
     } finally {
       setLoading(false);
     }
@@ -112,16 +161,17 @@ const Assign = () => {
 
   const loadAssignedContractors = async (jobsiteId: string) => {
     try {
+      // Only get assignments for this jobsite
       const assignmentsResponse = await databases.listDocuments(
         config.databaseId!,
         config.assignmentCollectionId!,
         [Query.equal('job_site_id', jobsiteId)]
       );
-
+  
       const contractorIds = Array.from(
         new Set(assignmentsResponse.documents.map((a: any) => a.contractor_id))
       );
-
+  
       const contractorNames = await Promise.all(
         contractorIds.map(async (id: string) => {
           const contractor = await databases.getDocument(
@@ -132,7 +182,7 @@ const Assign = () => {
           return contractor.name;
         })
       );
-
+  
       setContractorsMap(prev => ({
         ...prev,
         [jobsiteId]: contractorNames
@@ -155,55 +205,103 @@ const Assign = () => {
   };
 
   const handlePostAllJobs = async () => {
+    if (!selectedDate) {
+      Alert.alert('Validation Error', 'Please select a date for the assignments.');
+      return;
+    }
+  
     setLoading(true);
     try {
-      // Get all jobsites that haven't been posted yet
-      const jobsitesToPost = jobsites.filter(jobsite => !jobsite.posted);
-  
-      if (jobsitesToPost.length === 0) {
-        Alert.alert('Info', 'No new jobsites to post.');
-        return;
-      }
-  
-      // Update all jobsites to posted
-      const updateJobsitePromises = jobsitesToPost.map(jobsite =>
-        databases.updateDocument(
-          config.databaseId!,
-          config.jobsiteCollectionId!,
-          jobsite.$id,
-          { posted: true }
-        )
-      );
-  
-      await Promise.all(updateJobsitePromises);
-  
-      // Get all assignments for these jobsites
-      const assignmentsResponse = await databases.listDocuments(
+      // Get all unposted assignments
+      const unpostedAssignments = await databases.listDocuments(
         config.databaseId!,
         config.assignmentCollectionId!,
         [Query.equal('posted', false)]
       );
   
-      // Update all assignments to posted
-      const updateAssignmentPromises = assignmentsResponse.documents.map((assignment: any) =>
+      if (unpostedAssignments.documents.length === 0) {
+        Alert.alert('Info', 'No new assignments to post.');
+        setLoading(false);
+        return;
+      }
+  
+      // Group assignments by jobsite and date
+      const assignmentsByJobsiteAndDate = unpostedAssignments.documents.reduce((acc: any, assignment) => {
+        const key = `${assignment.job_site_id}_${assignment.date}`;
+        if (!acc[key]) {
+          acc[key] = [];
+        }
+        acc[key].push(assignment);
+        return acc;
+      }, {});
+  
+      // Handle duplicates
+      for (const key in assignmentsByJobsiteAndDate) {
+        const assignments = assignmentsByJobsiteAndDate[key];
+        if (assignments.length > 1) {
+          assignments.sort((a: any, b: any) => 
+            new Date(b.$createdAt).getTime() - new Date(a.$createdAt).getTime()
+          );
+  
+          const shouldOverride = await new Promise((resolve) => {
+            Alert.alert(
+              'Duplicate Assignment Date',
+              `There are multiple assignments for ${assignments[0].job_site_id} on ${new Date(assignments[0].date).toLocaleDateString()}. Keep newest assignment?`,
+              [
+                { text: 'No', onPress: () => resolve(false), style: 'cancel' },
+                { text: 'Yes', onPress: () => resolve(true) }
+              ]
+            );
+          });
+  
+          assignmentsByJobsiteAndDate[key] = shouldOverride ? 
+            [assignments[0]] : [assignments[assignments.length - 1]];
+        }
+      }
+  
+      const assignmentsToPost = Object.values(assignmentsByJobsiteAndDate).flat();
+  
+      // Update assignments
+      const updateAssignmentPromises = assignmentsToPost.map((assignment: any) =>
         databases.updateDocument(
           config.databaseId!,
           config.assignmentCollectionId!,
           assignment.$id,
+          { 
+            posted: true,
+            date: selectedDate.toISOString()
+          }
+        )
+      );
+  
+      // Update jobsites
+      const jobsiteIds = [...new Set(assignmentsToPost.map((a: any) => a.job_site_id))];
+      const updateJobsitePromises = jobsiteIds.map(jobsiteId =>
+        databases.updateDocument(
+          config.databaseId!,
+          config.jobsiteCollectionId!,
+          jobsiteId,
           { posted: true }
         )
       );
   
-      await Promise.all(updateAssignmentPromises);
-      Alert.alert('Success', 'All job sites posted successfully.');
+      await Promise.all([...updateAssignmentPromises, ...updateJobsitePromises]);
       
-      // Refresh the jobsites list
+      // Reset selections and refresh
       fetchJobsites();
+      Alert.alert('Success', 'All assignments posted successfully.');
     } catch (error) {
-      console.error('Error posting job sites:', error);
-      Alert.alert('Error', 'Failed to post job sites.');
+      console.error('Error posting assignments:', error);
+      Alert.alert('Error', 'Failed to post assignments.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDateChange = (event: any, date?: Date) => {
+    setExpandedDate(Platform.OS === 'ios');
+    if (date) {
+      setSelectedDate(date);
     }
   };
 
@@ -230,6 +328,30 @@ const Assign = () => {
   return (
     <SafeAreaView style={styles.container}>
       <Text style={styles.title}>Jobsite Assignments</Text>
+      
+      <View style={styles.dateSection}>
+        <Text style={styles.dateLabel}>Select Date:</Text>
+        <Text 
+          style={styles.dateValue}
+          onPress={() => setExpandedDate(!expandedDate)}
+        >
+          {selectedDate.toLocaleDateString()}
+        </Text>
+        {expandedDate && (
+          <DateTimePicker
+            value={selectedDate}
+            mode="date"
+            display="inline"
+            onChange={handleDateChange}
+            minimumDate={new Date()}
+            style={[
+              styles.datePicker,
+              { height: 300 }
+            ]}
+          />
+        )}
+      </View>
+
       <CustomButton 
         title="Post All Job Sites"
         handlePress={handlePostAllJobs}
