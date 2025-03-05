@@ -4,8 +4,21 @@ import axios from 'axios';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useGlobalContext } from '@/lib/global-provider';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { getLoggedHours } from '@/lib/appwrite';
+import { getLoggedHours, databases } from '@/lib/appwrite';
 import CustomButton from '@/components/CustomButton';
+import { Query } from 'react-native-appwrite';
+
+export const config = {
+  platform: "com.jsm.ironcraft",
+  endpoint: process.env.EXPO_PUBLIC_APPWRITE_ENDPOINT,
+  projectId: process.env.EXPO_PUBLIC_APPWRITE_PROJECT_ID,
+  databaseId: process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID,
+  contractorCollectionId: process.env.EXPO_PUBLIC_APPWRITE_CONTRACTORS_COLLECTION_ID,
+  hoursCollectionId: process.env.EXPO_PUBLIC_APPWRITE_HOURS_COLLECTION_ID,
+  jobsiteCollectionId: process.env.EXPO_PUBLIC_APPWRITE_JOB_SITES_COLLECTION_ID,
+  assignmentCollectionId: process.env.EXPO_PUBLIC_APPWRITE_ASSIGNMENT_COLLECTION_ID,
+  payCollectionId: process.env.EXPO_PUBLIC_APPWRITE_PAY_COLLECTION_ID,
+};
 
 const Hours = () => {
   const { user } = useGlobalContext();
@@ -14,7 +27,8 @@ const Hours = () => {
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
   const [totalHours, setTotalHours] = useState<number | null>(null);
-  const [dailyHours, setDailyHours] = useState<{ date: string; hours: number }[]>([]);
+  const [dailyHours, setDailyHours] = useState<{ date: string; hours: number; pay: number }[]>([]);
+  const [totalPay, setTotalPay] = useState<number | null>(null);
 
   const handleStartDateChange = (event: any, selectedDate?: Date) => {
     const currentDate = selectedDate || startDate;
@@ -29,12 +43,6 @@ const Hours = () => {
   };
 
   const handleFetchHours = async () => {
-
-    console.log(user?.privilege);
-    console.log(user?.name);
-    console.log('2');
-    console.log('comes from hours.tsx');
-
     if (!user) {
       Alert.alert('Error', 'User not found.');
       return;
@@ -43,19 +51,42 @@ const Hours = () => {
     try {
       const startDateString = startDate.toISOString().split('T')[0];
       const endDateString = endDate.toISOString().split('T')[0];
+      
+      // Fetch hours
       const loggedHours = await getLoggedHours(user.$id, startDateString, endDateString);
 
-      const total = loggedHours.reduce((sum, log) => sum + parseFloat(log.hours), 0);
-      setTotalHours(total);
+      // Fetch pay records for the same period
+      const payResponse = await databases.listDocuments(
+        config.databaseId,
+        config.payCollectionId,
+        [
+          Query.equal('contractor_id', user.$id),
+          Query.greaterThanEqual('date', startDateString),
+          Query.lessThanEqual('date', endDateString)
+        ]
+      );
+
+      // Create a map of date to pay amount
+      const payByDate = payResponse.documents.reduce((acc, pay) => {
+        acc[pay.date] = pay.pay;
+        return acc;
+      }, {} as { [key: string]: number });
 
       const dailyHoursData = loggedHours.map(log => ({
         date: log.date,
         hours: parseFloat(log.hours),
+        pay: payByDate[log.date] || 0
       }));
+
+      const totalHoursSum = dailyHoursData.reduce((sum, log) => sum + log.hours, 0);
+      const totalPaySum = dailyHoursData.reduce((sum, log) => sum + log.pay, 0);
+
+      setTotalHours(totalHoursSum);
+      setTotalPay(totalPaySum);
       setDailyHours(dailyHoursData);
     } catch (error) {
-      console.error('Error fetching logged hours:', error);
-      Alert.alert('Error', 'An error occurred while fetching the logged hours.');
+      console.error('Error fetching logged hours and pay:', error);
+      Alert.alert('Error', 'An error occurred while fetching the data.');
     }
   };
 
@@ -96,16 +127,31 @@ const Hours = () => {
           isLoading={undefined} textStyles={undefined}
           />
         {totalHours !== null && (
-          <Text style={styles.totalHoursText}>Total Hours Logged: {totalHours.toFixed(2)}</Text>
+          <View style={styles.totalsContainer}>
+            <Text style={styles.totalHoursText}>
+              Total Hours Logged: {totalHours.toFixed(2)}
+            </Text>
+            <Text style={styles.totalPayText}>
+              Total Pay: ${totalPay?.toFixed(2) || '0.00'}
+            </Text>
+          </View>
         )}
         {dailyHours.length > 0 && (
           <View style={styles.dailyHoursContainer}>
             {dailyHours.map((log, index) => (
-              <Text key={index} style={styles.dailyHoursText}>
-                {new Date(log.date).toLocaleDateString()}: {log.hours.toFixed(2)} hours
-              </Text>
+              <View key={index} style={styles.dailyLogItem}>
+                <Text style={styles.dailyHoursText}>
+                  {new Date(log.date).toLocaleDateString()}
+                </Text>
+                <Text style={styles.dailyHoursText}>
+                  Hours: {log.hours.toFixed(2)}
+                </Text>
+                <Text style={styles.dailyPayText}>
+                  Pay: ${log.pay.toFixed(2)}
+                </Text>
+              </View>
             ))}
-            </View>
+          </View>
         )}
       </View>
     </SafeAreaView>
@@ -161,6 +207,30 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: 'white',
   },
+  totalsContainer: {
+    marginTop: 20,
+    padding: 16,
+    backgroundColor: '#1e1e1e',
+    borderRadius: 8,
+  },
+  totalPayText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#4CAF50',
+    marginTop: 8,
+  },
+  dailyLogItem: {
+    backgroundColor: '#1e1e1e',
+    padding: 12,
+    marginVertical: 4,
+    borderRadius: 6,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  dailyPayText: {
+    fontSize: 16,
+    color: '#4CAF50',
+  }
 });
 
 export default Hours;
