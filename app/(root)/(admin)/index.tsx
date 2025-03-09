@@ -8,17 +8,19 @@ import CustomButton from '@/components/CustomButton';
 import React, { useState, useEffect, useCallback } from 'react';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Platform } from 'react-native';
+import {config} from '@/constants/config';
+import { sendPushNotification } from '@/lib/notifications';
 
-export const config = {
-  platform: "com.jsm.ironcraft",
-  endpoint: process.env.EXPO_PUBLIC_APPWRITE_ENDPOINT,
-  projectId: process.env.EXPO_PUBLIC_APPWRITE_PROJECT_ID,
-  databaseId: process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID,
-  contractorCollectionId: process.env.EXPO_PUBLIC_APPWRITE_CONTRACTORS_COLLECTION_ID,
-  hoursCollectionId: process.env.EXPO_PUBLIC_APPWRITE_HOURS_COLLECTION_ID,
-  jobsiteCollectionId: process.env.EXPO_PUBLIC_APPWRITE_JOB_SITES_COLLECTION_ID,
-  assignmentCollectionId: process.env.EXPO_PUBLIC_APPWRITE_ASSIGNMENT_COLLECTION_ID,
-};
+// export const config = {
+//   platform: "com.jsm.ironcraft",
+//   endpoint: process.env.EXPO_PUBLIC_APPWRITE_ENDPOINT,
+//   projectId: process.env.EXPO_PUBLIC_APPWRITE_PROJECT_ID,
+//   databaseId: process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID,
+//   contractorCollectionId: process.env.EXPO_PUBLIC_APPWRITE_CONTRACTORS_COLLECTION_ID,
+//   hoursCollectionId: process.env.EXPO_PUBLIC_APPWRITE_HOURS_COLLECTION_ID,
+//   jobsiteCollectionId: process.env.EXPO_PUBLIC_APPWRITE_JOB_SITES_COLLECTION_ID,
+//   assignmentCollectionId: process.env.EXPO_PUBLIC_APPWRITE_ASSIGNMENT_COLLECTION_ID,
+// };
 
 const styles = StyleSheet.create({
   container: {
@@ -286,6 +288,32 @@ const Assign = () => {
       );
   
       await Promise.all([...updateAssignmentPromises, ...updateJobsitePromises]);
+      
+      // Send notifications to all assigned contractors
+      const assignedContractors = unpostedAssignments.documents.map(a => a.contractor_id);
+      
+      // Get contractor details including push tokens
+      const contractorsResponse = await databases.listDocuments(
+        config.databaseId!,
+        config.contractorCollectionId!,
+        [Query.equal('$id', assignedContractors)]
+      );
+    
+      // Send notifications with error handling
+      for (const contractor of contractorsResponse.documents) {
+        if (contractor.pushToken) {
+          try {
+            await sendPushNotification(
+              contractor.pushToken,
+              'New Assignment',
+              'You have been assigned to a new jobsite. Check your assignments for details.'
+            );
+          } catch (notificationError) {
+            console.error('Error sending notification to contractor:', contractor.$id, notificationError);
+            // Continue with other contractors even if one fails
+          }
+        }
+      }
       
       // Reset selections and refresh
       fetchJobsites();

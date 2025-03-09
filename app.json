@@ -8,14 +8,22 @@
     "scheme": "Ironcraft_logging",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "extra": {
+      "eas": {
+        "projectId": "496ac26c-df98-4dc4-a739-a6fe8c46abd3"
+      }
+    },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.jsm.ironcraft"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#000000"
-      }
+      },
+      "package": "com.jsm.ironcraft",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "bundler": "metro",
@@ -32,23 +40,30 @@
           "backgroundColor": "#000000",
           "enableFullScreenImage_legacy": true
         }
-    ],
-    [
-      "expo-font",
-      {
-        "fonts": [
-          "./assets/fonts/Rubik-Bold.ttf",
-          "./assets/fonts/Rubik-ExtraBold.ttf",
-          "./assets/fonts/Rubik-Light.ttf",
-          "./assets/fonts/Rubik-Medium.ttf",
-          "./assets/fonts/Rubik-Regular.ttf",
-          "./assets/fonts/Rubik-SemiBold.ttf"
-        ]
-      }
+      ],
+      [
+        "expo-font",
+        {
+          "fonts": [
+            "./assets/fonts/Rubik-Bold.ttf",
+            "./assets/fonts/Rubik-ExtraBold.ttf",
+            "./assets/fonts/Rubik-Light.ttf",
+            "./assets/fonts/Rubik-Medium.ttf",
+            "./assets/fonts/Rubik-Regular.ttf",
+            "./assets/fonts/Rubik-SemiBold.ttf"
+          ]
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/notification-icon.png",
+          "color": "#000000"
+        }
+      ]
     ]
-  ],
+  },
   "experiments": {
     "typedRoutes": true
   }
-}
 }

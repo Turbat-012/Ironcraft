@@ -1,21 +1,11 @@
 import { View, ScrollView, Text, SafeAreaView, Image, TouchableOpacity, ImageSourcePropType, Alert, Modal, TextInput } from 'react-native'   
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import icons from '@/constants/icons';
 import { useGlobalContext } from '@/lib/global-provider';
 import { logout } from '@/lib/appwrite';
 import { databases } from '@/lib/appwrite';
-
-export const config = {
-    platform: "com.jsm.ironcraft",
-    endpoint: process.env.EXPO_PUBLIC_APPWRITE_ENDPOINT,
-    projectId: process.env.EXPO_PUBLIC_APPWRITE_PROJECT_ID,
-    databaseId: process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID,
-    contractorCollectionId: process.env.EXPO_PUBLIC_APPWRITE_CONTRACTORS_COLLECTION_ID,
-    hoursCollectionId: process.env.EXPO_PUBLIC_APPWRITE_HOURS_COLLECTION_ID,
-    jobsiteCollectionId: process.env.EXPO_PUBLIC_APPWRITE_JOB_SITES_COLLECTION_ID,
-    assignmentCollectionId: process.env.EXPO_PUBLIC_APPWRITE_ASSIGNMENT_COLLECTION_ID,
-    payCollectionId: process.env.EXPO_PUBLIC_APPWRITE_PAY_COLLECTION_ID,
-  };
+import { config } from '@/constants/config';
+import { sendPushNotification } from '@/lib/notifications';
 
 interface SettingsItemProps {
     icon: ImageSourcePropType;
@@ -71,7 +61,11 @@ const ViewProfileModal = React.memo(({
                 <Text className="text-white mb-2">ABN:</Text>
                 <TextInput
                     value={formValues.abn}
-                    onChangeText={(text) => setFormValues(prev => ({ ...prev, abn: text }))}
+                    onChangeText={(text) => {
+                        // Only allow numbers
+                        const numbersOnly = text.replace(/[^0-9]/g, '');
+                        setFormValues(prev => ({ ...prev, abn: numbersOnly }))
+                    }}
                     className="bg-[#2d2d2d] text-white p-3 rounded-lg mb-6"
                     placeholderTextColor="#666"
                     keyboardType="numeric"
@@ -111,6 +105,21 @@ const Profile = () => {
         name: '',
         abn: ''
     });
+
+    // Initialize with nested data
+    useEffect(() => {
+        if (user?.contractorData) {
+            setFormValues({
+                name: user.contractorData.name || '',
+                abn: user.contractorData.abn || ''
+            });
+            setLocalFormValues({
+                name: user.contractorData.name || '',
+                abn: user.contractorData.abn || ''
+            });
+        }
+    }, [user]);
+
     // Add local form state separate from user data
     const [localFormValues, setLocalFormValues] = useState({
         name: '',
@@ -121,33 +130,61 @@ const Profile = () => {
     const handleOpenModal = () => {
         setLocalFormValues({
             name: user?.name || '',
-            abn: user?.abn || ''
+            abn: user?.abn?.toString() || '' // Convert to string if exists
         });
         setIsEditModalVisible(true);
     };
 
+    // Modify handleEditProfile to ensure state is updated correctly
     const handleEditProfile = async () => {
         try {
-            await databases.updateDocument(
+            // Validate ABN format (11 digits)
+            if (!/^\d{11}$/.test(localFormValues.abn)) {
+                Alert.alert('Error', 'ABN must be exactly 11 digits');
+                return;
+            }
+
+            // Directly fetch latest data after update
+            const response = await databases.updateDocument(
                 config.databaseId!,
                 config.contractorCollectionId!,
                 user.$id,
                 {
                     name: localFormValues.name,
-                    abn: localFormValues.abn
+                    abn: localFormValues.abn // Make sure this matches the field name in Appwrite
                 }
             );
 
-            // Only update formValues and refetch after successful save
-            setFormValues(localFormValues);
+            console.log('Update response:', response); // Debug log
+
+            // Update local state with the response data
+            setFormValues({
+                name: response.name,
+                abn: response.abn
+            });
+
+            await refetch();
             Alert.alert('Success', 'Profile updated successfully');
-            refetch();
             setIsEditModalVisible(false);
         } catch (error) {
             console.error('Error updating profile:', error);
             Alert.alert('Error', 'Failed to update profile');
         }
     };
+
+    // Add useEffect to update local state when user data changes
+    useEffect(() => {
+        if (user) {
+            setFormValues({
+                name: user.name || '',
+                abn: user.abn || ''
+            });
+            setLocalFormValues({
+                name: user.name || '',
+                abn: user.abn || ''
+            });
+        }
+    }, [user]);
 
     const handleLogout = async () => {
         const result = await logout();
@@ -160,6 +197,22 @@ const Profile = () => {
         }
     };
 
+    const testNotification = async () => {
+        if (user?.pushToken) {
+            try {
+                await sendPushNotification(
+                    user.pushToken,
+                    'Test Notification',
+                    'This is a test notification'
+                );
+                Alert.alert('Success', 'Test notification sent');
+            } catch (error) {
+                Alert.alert('Error', 'Failed to send test notification');
+            }
+        }
+    };
+
+    // Update the ABN display in your JSX
     return (
         <SafeAreaView className="h-full bg-black">
             <ScrollView showsVerticalScrollIndicator={false}
@@ -178,9 +231,8 @@ const Profile = () => {
 
                 <View className="flex flex-col mt-5 border-t pt-5 border-primary-200">
                     <Text className="text-lg color-white font-rubik-medium mb-4">
-                        ABN: {user?.abn || 'Not set'}
+                        ABN: {user?.contractorData?.abn || 'Not set'}
                     </Text>
-
                     <SettingsItem 
                         icon={icons.edit} 
                         title="View Profile" 
@@ -194,6 +246,12 @@ const Profile = () => {
                         title="Logout" 
                         textStyle="text-red-500"  // Changed from text-danger to text-red-500
                         onPress={handleLogout} 
+                    />
+
+                    <SettingsItem 
+                        icon={icons.bell}
+                        title="Test Notification"
+                        onPress={testNotification}
                     />
                 </View>
 
