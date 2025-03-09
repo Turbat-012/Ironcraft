@@ -21,26 +21,22 @@ const Index = () => {
   const { user, loading } = useGlobalContext();
   const [assignments, setAssignments] = useState([]);
   const [loadingAssignments, setLoadingAssignments] = useState(true);
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [expandedDate, setExpandedDate] = useState(false);
 
   useEffect(() => {
     if (user) {
       fetchAssignments();
     }
-  }, [user, selectedDate]); // Add selectedDate as dependency
-
-  const handleDateChange = (event: any, date?: Date) => {
-    setExpandedDate(Platform.OS === 'ios');
-    if (date) {
-      setSelectedDate(date);
-    }
-  };
+  }, [user]);
 
   const fetchAssignments = async () => {
     setLoadingAssignments(true);
     try {
-      const dateString = selectedDate.toISOString().split('T')[0];
+      // Get today's date at midnight
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayString = today.toISOString().split('T')[0];
+
+      console.log('Today\'s date for comparison:', todayString); // Debug log
 
       // Fetch assignments for the contractor
       const assignmentsResponse = await databases.listDocuments(
@@ -49,15 +45,22 @@ const Index = () => {
         [
           Query.equal('contractor_id', user.$id),
           Query.equal('posted', true),
-          Query.greaterThanEqual('date', dateString)
+          Query.greaterThanEqual('date', todayString) // This ensures we only get today and future dates
         ]
       );
 
-      console.log('Assignments fetched:', assignmentsResponse.documents);
+      console.log('Fetched assignments:', assignmentsResponse.documents); // Debug log
+
+      // Filter out any assignments from before today (extra safety check)
+      const futureAssignments = assignmentsResponse.documents.filter(assignment => {
+        const assignmentDate = new Date(assignment.date);
+        assignmentDate.setHours(0, 0, 0, 0);
+        return assignmentDate >= today;
+      });
 
       // Fetch job site details for each assignment
       const assignmentsWithJobsite = await Promise.all(
-        assignmentsResponse.documents.map(async (assignment) => {
+        futureAssignments.map(async (assignment) => {
           const jobsiteResponse = await databases.getDocument(
             config.databaseId!,
             config.jobsiteCollectionId!,
@@ -70,7 +73,12 @@ const Index = () => {
         })
       );
 
-      setAssignments(assignmentsWithJobsite);
+      // Sort assignments by date
+      const sortedAssignments = assignmentsWithJobsite.sort((a, b) => 
+        new Date(a.date).getTime() - new Date(b.date).getTime()
+      );
+
+      setAssignments(sortedAssignments);
     } catch (error) {
       console.error('Error fetching assignments:', error);
     } finally {
@@ -89,41 +97,21 @@ const Index = () => {
   return (
     <ScrollView style={styles.container}>
       <SafeAreaView>
-        <Text style={styles.title}>Assignments</Text>
-        
-        <View style={styles.dateSection}>
-          <Text style={styles.dateLabel}>Select Date:</Text>
-          <Text 
-            style={styles.dateValue}
-            onPress={() => setExpandedDate(!expandedDate)}
-          >
-            {selectedDate.toLocaleDateString()}
-          </Text>
-          {expandedDate && (
-            <DateTimePicker
-              value={selectedDate}
-              mode="date"
-              display="inline"
-              onChange={handleDateChange}
-              minimumDate={new Date()}
-              style={[
-                styles.datePicker,
-                { height: 300 }
-              ]}
-            />
-          )}
-        </View>
+        <Text style={styles.title}>Upcoming Assignments</Text>
 
         {assignments.length > 0 ? (
           assignments.map((assignment) => (
             <View key={assignment.$id} style={styles.assignmentItem}>
-              <Text style={styles.assignmentText}>
-                {new Date(assignment.date).toLocaleDateString()} - {assignment.jobsite.name}
+              <Text style={styles.dateText}>
+                {new Date(assignment.date).toLocaleDateString()}
+              </Text>
+              <Text style={styles.jobsiteText}>
+                {assignment.jobsite.name}
               </Text>
             </View>
           ))
         ) : (
-          <Text style={styles.noAssignmentsText}>No assignments found.</Text>
+          <Text style={styles.noAssignmentsText}>No upcoming assignments found.</Text>
         )}
       </SafeAreaView>
     </ScrollView>
@@ -149,35 +137,21 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 10,
   },
-  assignmentText: {
+  dateText: {
     fontSize: 16,
+    color: '#4CAF50',
+    marginBottom: 4,
+    fontWeight: 'bold',
+  },
+  jobsiteText: {
+    fontSize: 18,
     color: '#ffffff',
   },
   noAssignmentsText: {
     fontSize: 16,
     color: '#ffffff',
     textAlign: 'center',
-  },
-  dateSection: {
-    backgroundColor: '#1e1e1e',
-    padding: 16,
-    marginBottom: 20,
-    borderRadius: 8,
-  },
-  dateLabel: {
-    color: '#ffffff',
-    fontSize: 16,
-    marginBottom: 8,
-  },
-  dateValue: {
-    color: '#0061ff',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  datePicker: {
-    marginTop: 10,
-    backgroundColor: '#333',
-  },
+  }
 });
 
 export default Index;
