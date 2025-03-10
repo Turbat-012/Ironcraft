@@ -50,21 +50,28 @@ export async function sendPushNotification(expoPushToken: string, title: string,
     sound: 'default',
     title: title,
     body: body,
-    data: { someData: 'goes here' },
+    data: { type: 'test' },
   };
 
   try {
-    await fetch('https://api.expo.dev/v2/push/send', {
+    const response = await fetch('https://exp.host/--/api/v2/push/send', {
       method: 'POST',
       headers: {
         'Accept': 'application/json',
         'Accept-encoding': 'gzip, deflate',
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.EXPO_ACCESS_TOKEN}`
       },
       body: JSON.stringify(message),
     });
+
+    const responseData = await response.json();
+    console.log('Notification send response:', responseData);
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
   } catch (error) {
     console.error('Error sending push notification:', error);
+    throw error;
   }
 }

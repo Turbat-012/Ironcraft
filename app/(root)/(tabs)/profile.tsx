@@ -47,7 +47,7 @@ const ViewProfileModal = React.memo(({
                 
                 <Text className="text-white mb-2">Email:</Text>
                 <View className="bg-[#2d2d2d] p-3 rounded-lg mb-4">
-                    <Text className="text-gray-400">{user?.email}</Text>
+                    <Text className="text-gray-400">{user?.contractorData?.email}</Text>
                 </View>
 
                 <Text className="text-white mb-2">Name:</Text>
@@ -198,17 +198,23 @@ const Profile = () => {
     };
 
     const testNotification = async () => {
-        if (user?.pushToken) {
+        console.log('Testing notification with token:', user?.contractorData?.pushToken); // Debug log
+        
+        if (user?.contractorData?.pushToken) {
             try {
                 await sendPushNotification(
-                    user.pushToken,
+                    user.contractorData.pushToken,
                     'Test Notification',
                     'This is a test notification'
                 );
+                console.log('Notification sent successfully');
                 Alert.alert('Success', 'Test notification sent');
             } catch (error) {
+                console.error('Notification error:', error);
                 Alert.alert('Error', 'Failed to send test notification');
             }
+        } else {
+            Alert.alert('Error', 'No push token available');
         }
     };
 
