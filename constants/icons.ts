@@ -50,7 +50,7 @@ export default {
   logout,
   people,
   shield,
-  wallet,
+  wallet: require('../assets/icons/wallet.png'),
   rightArrow,
   send,
   bed,

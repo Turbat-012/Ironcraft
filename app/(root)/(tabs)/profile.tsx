@@ -62,9 +62,8 @@ const ViewProfileModal = React.memo(({
                 <TextInput
                     value={formValues.abn}
                     onChangeText={(text) => {
-                        // Only allow numbers
                         const numbersOnly = text.replace(/[^0-9]/g, '');
-                        setFormValues(prev => ({ ...prev, abn: numbersOnly }))
+                        setFormValues(prev => ({ ...prev, abn: numbersOnly }));
                     }}
                     className="bg-[#2d2d2d] text-white p-3 rounded-lg mb-6"
                     placeholderTextColor="#666"
@@ -72,12 +71,68 @@ const ViewProfileModal = React.memo(({
                     maxLength={11}
                 />
 
-                <Text className="text-white mb-2">Registration Date:</Text>
-                <View className="bg-[#2d2d2d] p-3 rounded-lg mb-6">
-                    <Text className="text-gray-400">
-                        {new Date(user?.$createdAt).toLocaleDateString()}
-                    </Text>
+                <View className="flex-row justify-end gap-4">
+                    <TouchableOpacity 
+                        onPress={onClose}
+                        className="px-4 py-2 rounded-lg bg-gray-600"
+                    >
+                        <Text className="text-white">Close</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                        onPress={onSave}
+                        className="px-4 py-2 rounded-lg bg-blue-500"
+                    >
+                        <Text className="text-white">Save Changes</Text>
+                    </TouchableOpacity>
                 </View>
+            </View>
+        </View>
+    </Modal>
+));
+
+const PaymentDetailsModal = React.memo(({ 
+    isVisible, 
+    onClose, 
+    onSave, 
+    formValues, 
+    setFormValues, 
+    user 
+}) => (
+    <Modal
+        animationType="slide"
+        transparent={true}
+        visible={isVisible}
+        onRequestClose={onClose}
+    >
+        <View className="flex-1 justify-center items-center bg-black/50">
+            <View className="bg-[#1e1e1e] p-6 rounded-xl w-[90%]">
+                <Text className="text-xl text-white font-rubik-bold mb-4">Payment Details</Text>
+
+                <Text className="text-white mb-2">BSB:</Text>
+                <TextInput
+                    value={formValues.bsb}
+                    onChangeText={(text) => {
+                        const numbersOnly = text.replace(/[^0-9]/g, '');
+                        setFormValues(prev => ({ ...prev, bsb: numbersOnly }));
+                    }}
+                    className="bg-[#2d2d2d] text-white p-3 rounded-lg mb-4"
+                    placeholderTextColor="#666"
+                    keyboardType="numeric"
+                    maxLength={6}
+                />
+
+                <Text className="text-white mb-2">Account Number:</Text>
+                <TextInput
+                    value={formValues.accountNumber}
+                    onChangeText={(text) => {
+                        const numbersOnly = text.replace(/[^0-9]/g, '');
+                        setFormValues(prev => ({ ...prev, accountNumber: numbersOnly }));
+                    }}
+                    className="bg-[#2d2d2d] text-white p-3 rounded-lg mb-6"
+                    placeholderTextColor="#666"
+                    keyboardType="numeric"
+                    maxLength={8}
+                />
 
                 <View className="flex-row justify-end gap-4">
                     <TouchableOpacity 
@@ -103,7 +158,9 @@ const Profile = () => {
     const [isEditModalVisible, setIsEditModalVisible] = useState(false);
     const [formValues, setFormValues] = useState({
         name: '',
-        abn: ''
+        abn: '',
+        bsb: '',
+        accountNumber: ''
     });
 
     // Initialize with nested data
@@ -111,11 +168,15 @@ const Profile = () => {
         if (user?.contractorData) {
             setFormValues({
                 name: user.contractorData.name || '',
-                abn: user.contractorData.abn || ''
+                abn: user.contractorData.abn || '',
+                bsb: user.contractorData.bsb || '',
+                accountNumber: user.contractorData.accountNumber || ''
             });
             setLocalFormValues({
                 name: user.contractorData.name || '',
-                abn: user.contractorData.abn || ''
+                abn: user.contractorData.abn || '',
+                bsb: user.contractorData.bsb || '',
+                accountNumber: user.contractorData.accountNumber || ''
             });
         }
     }, [user]);
@@ -123,7 +184,9 @@ const Profile = () => {
     // Add local form state separate from user data
     const [localFormValues, setLocalFormValues] = useState({
         name: '',
-        abn: ''
+        abn: '',
+        bsb: '',
+        accountNumber: ''
     });
 
     // Initialize local form values when modal opens
@@ -144,23 +207,35 @@ const Profile = () => {
                 return;
             }
 
-            // Directly fetch latest data after update
+            // Validate BSB (6 digits)
+            if (!/^\d{6}$/.test(localFormValues.bsb)) {
+                Alert.alert('Error', 'BSB must be exactly 6 digits');
+                return;
+            }
+
+            // Validate Account Number (8 digits)
+            if (!/^\d{8}$/.test(localFormValues.accountNumber)) {
+                Alert.alert('Error', 'Account number must be exactly 8 digits');
+                return;
+            }
+
             const response = await databases.updateDocument(
                 config.databaseId!,
                 config.contractorCollectionId!,
                 user.$id,
                 {
                     name: localFormValues.name,
-                    abn: localFormValues.abn // Make sure this matches the field name in Appwrite
+                    abn: localFormValues.abn,
+                    bsb: localFormValues.bsb,
+                    accountNumber: localFormValues.accountNumber
                 }
             );
 
-            console.log('Update response:', response); // Debug log
-
-            // Update local state with the response data
             setFormValues({
                 name: response.name,
-                abn: response.abn
+                abn: response.abn,
+                bsb: response.bsb,
+                accountNumber: response.accountNumber
             });
 
             await refetch();
@@ -199,7 +274,7 @@ const Profile = () => {
 
     const testNotification = async () => {
         console.log('Testing notification with token:', user?.contractorData?.pushToken); // Debug log
-        
+                
         if (user?.contractorData?.pushToken) {
             try {
                 await sendPushNotification(
@@ -216,6 +291,56 @@ const Profile = () => {
         } else {
             Alert.alert('Error', 'No push token available');
         }
+    };
+
+    // Add new state for payment modal
+    const [isPaymentModalVisible, setIsPaymentModalVisible] = useState(false);
+    const [paymentFormValues, setPaymentFormValues] = useState({
+        bsb: '',
+        accountNumber: ''
+    });
+
+    // Add payment details handler
+    const handlePaymentDetails = async () => {
+        try {
+            // Validate BSB (6 digits)
+            if (!/^\d{6}$/.test(paymentFormValues.bsb)) {
+                Alert.alert('Error', 'BSB must be exactly 6 digits');
+                return;
+            }
+
+            // Validate Account Number (8 digits)
+            if (!/^\d{8}$/.test(paymentFormValues.accountNumber)) {
+                Alert.alert('Error', 'Account number must be exactly 8 digits');
+                return;
+            }
+
+            const response = await databases.updateDocument(
+                config.databaseId!,
+                config.contractorCollectionId!,
+                user.$id,
+                {
+                    bsb: paymentFormValues.bsb,
+                    accountNumber: paymentFormValues.accountNumber
+                }
+            );
+
+            await refetch();
+            Alert.alert('Success', 'Payment details updated successfully');
+            setIsPaymentModalVisible(false);
+        } catch (error) {
+            console.error('Error updating payment details:', error);
+            Alert.alert('Error', 'Failed to update payment details');
+        }
+    };
+
+    // Add handler to open payment modal
+    const handleOpenPaymentModal = () => {
+        setPaymentFormValues({
+            bsb: user?.contractorData?.bsb || '',
+            accountNumber: user?.contractorData?.accountNumber || ''
+        });
+        setIsPaymentModalVisible(true);
     };
 
     // Update the ABN display in your JSX
@@ -248,6 +373,14 @@ const Profile = () => {
                     />
 
                     <SettingsItem 
+                        icon={icons.wallet} // Add wallet icon to your icons
+                        title="Payment Details" 
+                        showArrow={true}
+                        textStyle='text-white'
+                        onPress={handleOpenPaymentModal} 
+                    />
+
+                    <SettingsItem 
                         icon={icons.logout} 
                         title="Logout" 
                         textStyle="text-red-500"  // Changed from text-danger to text-red-500
@@ -267,6 +400,16 @@ const Profile = () => {
                     onSave={handleEditProfile}
                     formValues={localFormValues}
                     setFormValues={setLocalFormValues}
+                    user={user}
+                />
+
+                {/* Add Payment Details Modal */}
+                <PaymentDetailsModal 
+                    isVisible={isPaymentModalVisible}
+                    onClose={() => setIsPaymentModalVisible(false)}
+                    onSave={handlePaymentDetails}
+                    formValues={paymentFormValues}
+                    setFormValues={setPaymentFormValues}
                     user={user}
                 />
             </ScrollView>
