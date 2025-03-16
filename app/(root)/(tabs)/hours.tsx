@@ -8,18 +8,7 @@ import { getLoggedHours, databases } from '@/lib/appwrite';
 import CustomButton from '@/components/CustomButton';
 import { Query } from 'react-native-appwrite';
 import { config } from '@/constants/config';
-
-// export const config = {
-//   platform: "com.jsm.ironcraft",
-//   endpoint: process.env.EXPO_PUBLIC_APPWRITE_ENDPOINT,
-//   projectId: process.env.EXPO_PUBLIC_APPWRITE_PROJECT_ID,
-//   databaseId: process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID,
-//   contractorCollectionId: process.env.EXPO_PUBLIC_APPWRITE_CONTRACTORS_COLLECTION_ID,
-//   hoursCollectionId: process.env.EXPO_PUBLIC_APPWRITE_HOURS_COLLECTION_ID,
-//   jobsiteCollectionId: process.env.EXPO_PUBLIC_APPWRITE_JOB_SITES_COLLECTION_ID,
-//   assignmentCollectionId: process.env.EXPO_PUBLIC_APPWRITE_ASSIGNMENT_COLLECTION_ID,
-//   payCollectionId: process.env.EXPO_PUBLIC_APPWRITE_PAY_COLLECTION_ID,
-// };
+import { generateInvoice } from '@/lib/invoice_utility';
 
 const Hours = () => {
   const { user } = useGlobalContext();
@@ -28,7 +17,7 @@ const Hours = () => {
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
   const [totalHours, setTotalHours] = useState<number | null>(null);
-  const [dailyHours, setDailyHours] = useState<{ date: string; hours: number; pay: number }[]>([]);
+  const [dailyHours, setDailyHours] = useState<{ date: string; hours: number; pay: number; jobsite: string; hourlyRate: number }[]>([]);
   const [totalPay, setTotalPay] = useState<number | null>(null);
 
   const handleStartDateChange = (event: any, selectedDate?: Date) => {
@@ -53,10 +42,10 @@ const Hours = () => {
       const startDateString = startDate.toISOString().split('T')[0];
       const endDateString = endDate.toISOString().split('T')[0];
       
-      // Fetch hours
+      // Fetch hours with jobsite information
       const loggedHours = await getLoggedHours(user.$id, startDateString, endDateString);
 
-      // Fetch pay records for the same period
+      // Fetch pay records
       const payResponse = await databases.listDocuments(
         config.databaseId,
         config.payCollectionId,
@@ -67,7 +56,6 @@ const Hours = () => {
         ]
       );
 
-      // Create a map of date to pay amount
       const payByDate = payResponse.documents.reduce((acc, pay) => {
         acc[pay.date] = pay.pay;
         return acc;
@@ -76,18 +64,62 @@ const Hours = () => {
       const dailyHoursData = loggedHours.map(log => ({
         date: log.date,
         hours: parseFloat(log.hours),
-        pay: payByDate[log.date] || 0
+        hourlyRate: log.hourly_rate || 0,
+        pay: log.hourly_rate ? log.hours * log.hourly_rate : (payByDate[log.date] || 0),
+        jobsite: log.jobsiteName // Add jobsite name to the data
       }));
 
-      const totalHoursSum = dailyHoursData.reduce((sum, log) => sum + log.hours, 0);
-      const totalPaySum = dailyHoursData.reduce((sum, log) => sum + log.pay, 0);
-
-      setTotalHours(totalHoursSum);
-      setTotalPay(totalPaySum);
       setDailyHours(dailyHoursData);
+      setTotalHours(dailyHoursData.reduce((sum, log) => sum + log.hours, 0));
+      setTotalPay(dailyHoursData.reduce((sum, log) => sum + (log.hours * log.hourlyRate), 0));
     } catch (error) {
       console.error('Error fetching logged hours and pay:', error);
       Alert.alert('Error', 'An error occurred while fetching the data.');
+    }
+  };
+
+  const handleGenerateInvoice = async () => {
+    try {
+      // If no hours data, fetch it first
+      if (dailyHours.length === 0) {
+        await handleFetchHours();
+        
+        // Check if fetch was successful
+        if (dailyHours.length === 0) {
+          Alert.alert('Error', 'No hours found for selected date range.');
+          return;
+        }
+      }
+
+      // Create a map of date to jobsite
+      const jobsitesByDate = new Map();
+      
+      // Format daily hours to match exactly how it's shown in the list
+      const formattedDailyHours = dailyHours.map(day => ({
+        date: new Date(day.date).toISOString().split('T')[0],
+        jobsite: day.jobsite,
+        hours: parseFloat(day.hours),
+        hourly_rate: day.hourlyRate, // Use hourlyRate instead of hourly_rate
+        pay: day.hours * day.hourlyRate // Calculate pay using hourlyRate
+      }));
+
+      console.log('Daily hours before invoice:', dailyHours); // Debug log
+      console.log('Formatted daily hours for invoice:', formattedDailyHours); // Debug log
+
+      const invoiceData = {
+        contractorName: user.contractorData.name,
+        abn: user.contractorData.abn,
+        bsb: user.contractorData.bsb,
+        accountNumber: user.contractorData.accountNumber,
+        dailyHours: formattedDailyHours,
+        startDate: startDate.toISOString().split('T')[0],
+        endDate: endDate.toISOString().split('T')[0]
+      };
+
+      await generateInvoice(invoiceData);
+    } catch (error) {
+      console.error('Error generating invoice:', error);
+      Alert.alert('Error', 'Failed to generate invoice');
     }
   };
 
@@ -127,6 +159,13 @@ const Hours = () => {
           containerStyles="mt-10 bg-blue-500"
           isLoading={undefined} textStyles={undefined}
           />
+        <CustomButton 
+          title="Generate Invoice" 
+          handlePress={handleGenerateInvoice}
+          containerStyles="mt-4 bg-green-500"
+          isLoading={undefined}
+          textStyles={undefined}
+        />
         {totalHours !== null && (
           <View style={styles.totalsContainer}>
             <Text style={styles.totalHoursText}>
@@ -141,14 +180,22 @@ const Hours = () => {
           <View style={styles.dailyHoursContainer}>
             {dailyHours.map((log, index) => (
               <View key={index} style={styles.dailyLogItem}>
-                <Text style={styles.dailyHoursText}>
-                  {new Date(log.date).toLocaleDateString()}
-                </Text>
+                <View>
+                  <Text style={styles.dailyHoursText}>
+                    {new Date(log.date).toLocaleDateString()}
+                  </Text>
+                  <Text style={[styles.dailyHoursText, { fontSize: 14, color: '#888' }]}>
+                    {log.jobsite}
+                  </Text>
+                  <Text style={[styles.dailyHoursText, { fontSize: 14, color: '#888' }]}>
+                    Rate: ${log.hourlyRate}/hr
+                  </Text>
+                </View>
                 <Text style={styles.dailyHoursText}>
                   Hours: {log.hours.toFixed(2)}
                 </Text>
                 <Text style={styles.dailyPayText}>
-                  Pay: ${log.pay.toFixed(2)}
+                  Pay: ${(log.hours * log.hourlyRate).toFixed(2)}
                 </Text>
               </View>
             ))}
@@ -231,7 +278,23 @@ const styles = StyleSheet.create({
   dailyPayText: {
     fontSize: 16,
     color: '#4CAF50',
-  }
+  },
+  inputContainer: {
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 16,
+    marginBottom: 8,
+    color: 'white',
+  },
+  input: {
+    backgroundColor: '#1e1e1e',
+    borderWidth: 1,
+    borderColor: '#333',
+    padding: 10,
+    borderRadius: 5,
+    color: 'white',
+  },
 });
 
 export default Hours;

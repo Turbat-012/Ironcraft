@@ -4,16 +4,17 @@ import { openAuthSessionAsync } from "expo-web-browser";
 import { red } from "react-native-reanimated/lib/typescript/Colors";
 import hours from "@/app/(root)/(tabs)/hours";
 import { Float } from "react-native/Libraries/Types/CodegenTypes";
+import { config } from "@/constants/config";
 
-export const config = {
-    platform: "com.jsm.ironcraft",
-    endpoint: process.env.EXPO_PUBLIC_APPWRITE_ENDPOINT,
-    projectId: process.env.EXPO_PUBLIC_APPWRITE_PROJECT_ID,
-    databaseId: process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID,
-    contractorCollectionId: process.env.EXPO_PUBLIC_APPWRITE_CONTRACTORS_COLLECTION_ID,
-    hoursCollectionId: process.env.EXPO_PUBLIC_APPWRITE_HOURS_COLLECTION_ID,
-    jobsiteCollectionId: process.env.EXPO_PUBLIC_APPWRITE_JOB_SITES_COLLECTION_ID,
-}
+// export const config = {
+//     platform: "com.jsm.ironcraft",
+//     endpoint: process.env.EXPO_PUBLIC_APPWRITE_ENDPOINT,
+//     projectId: process.env.EXPO_PUBLIC_APPWRITE_PROJECT_ID,
+//     databaseId: process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID,
+//     contractorCollectionId: process.env.EXPO_PUBLIC_APPWRITE_CONTRACTORS_COLLECTION_ID,
+//     hoursCollectionId: process.env.EXPO_PUBLIC_APPWRITE_HOURS_COLLECTION_ID,
+//     jobsiteCollectionId: process.env.EXPO_PUBLIC_APPWRITE_JOB_SITES_COLLECTION_ID,
+// }
 
 export const client = new Client();
 
@@ -133,23 +134,55 @@ export const createUser = async (email: string, password: string, name: string) 
     }
 };
 
-export const logHours = async (contractorId: string, hours: Float, date: string) => {
+export const logHours = async (contractorId: string, hours: Float, date: string, hourlyRate: number) => {
   try {
+    console.log('Input date:', date); // Debug log
+
+    // Get all posted assignments for this contractor
+    const assignmentsResponse = await databases.listDocuments(
+      config.databaseId!,
+      config.assignmentCollectionId!,
+      [
+        Query.equal('contractor_id', contractorId),
+        Query.equal('posted', true)
+      ]
+    );
+
+    console.log('All assignments:', assignmentsResponse.documents); // Debug log
+
+    // Find assignment matching the selected date
+    const matchingAssignment = assignmentsResponse.documents.find(
+      assignment => assignment.date.split('T')[0] === date
+    );
+
+    console.log('Matching assignment:', matchingAssignment); // Debug log
+
+    if (!matchingAssignment) {
+      const availableDates = assignmentsResponse.documents
+        .map(a => new Date(a.date).toLocaleDateString('en-AU'))
+        .join(', ');
+
+      throw new Error(`No assignment found for date: ${new Date(date).toLocaleDateString('en-AU')}. Available assignments: ${availableDates}`);
+    }
+
+    // Create hours log with hourly rate
     const newLog = await databases.createDocument(
       config.databaseId!,
       config.hoursCollectionId!,
-      ID.unique(), // Generates a unique ID for the new document
+      ID.unique(),
       {
         contractor_id: contractorId,
         hours,
         date,
+        job_site_id: matchingAssignment.job_site_id,
+        hourly_rate: hourlyRate
       }
     );
 
-    return newLog; // newLog now contains the created document's details, including $id
+    return newLog;
   } catch (error) {
-    console.log(error);
-    throw new Error(error as string);
+    console.error('Error logging hours:', error);
+    throw error;
   }
 };
 
@@ -176,22 +209,30 @@ export const getJobsiteForTomorrow = async (contractorId: string) => {
     }
 };
 
-export const getLoggedHours = async (contractorId: string, startDate: string, endDate: string) => {
-    try {
-      const response = await databases.listDocuments(
-        config.databaseId!,
-        config.hoursCollectionId!, // Collection ID for hours
-        [
-          Query.equal('contractor_id', contractorId),
-          Query.greaterThanEqual('date', startDate),
-          Query.lessThanEqual('date', endDate)
-        ]
-      );
-  
-      return response.documents;
-    } catch (error) {
-      console.log(error);
-      throw new Error(error);
-    }
-  };
-  
+export const getLoggedHours = async (userId: string, startDate: string, endDate: string) => {
+  try {
+    const hoursResponse = await databases.listDocuments(
+      config.databaseId!,
+      config.hoursCollectionId,
+      [
+        Query.equal('contractor_id', userId),
+        Query.greaterThanEqual('date', startDate),
+        Query.lessThanEqual('date', endDate)
+      ]
+    );
+
+    // Map the response to include hourly_rate from the database
+    const hoursData = hoursResponse.documents.map(hour => ({
+      date: hour.date,
+      hours: parseFloat(hour.hours),
+      hourly_rate: parseFloat(hour.hourly_rate), // Make sure to get the hourly_rate
+      pay: hour.hours * hour.hourly_rate,
+      jobsite: hour.jobsiteName || 'Unknown Site'
+    }));
+
+    return hoursData;
+  } catch (error) {
+    console.error('Error fetching hours:', error);
+    throw error;
+  }
+};

@@ -133,38 +133,50 @@ const Logging = () => {
       return;
     }
   
-    const totalHours = parseFloat(hours) + parseFloat(minutes) / 60;
+    const totalHours = parseFloat(hours || '0') + parseFloat(minutes || '0') / 60;
     const rate = parseFloat(hourlyRate);
-    const totalPay = totalHours * rate;
   
     try {
+      setIsSubmitting(true);
+      
+      // Format date consistently
+      const formattedDate = date.toISOString().split('T')[0];
+      console.log('Submitting for date:', formattedDate); // Debug log
+      
       // Log hours
-      const hoursResponse = await logHours(user.$id, totalHours, date.toISOString().split('T')[0]);
-  
-      // Log pay with jobsite
-      const payResponse = await databases.createDocument(
-        config.databaseId!,
-        config.payCollectionId!,
-        ID.unique(),
-        {
-          contractor_id: user.$id,
-          jobsite_id: assignedJobsite.id,
-          date: date.toISOString().split('T')[0],
-          pay: totalPay
-        }
+      const hoursResponse = await logHours(
+        user.$id, 
+        totalHours, 
+        formattedDate,
+        rate
       );
   
-      if (hoursResponse && payResponse) {
-        Alert.alert('Success', 'Hours and pay logged successfully!');
-        setHours('');
-        setMinutes('');
-        setHourlyRate('');
-      } else {
-        Alert.alert('Error', 'Failed to log hours and pay.');
+      // Log pay with jobsite
+      if (hoursResponse) {
+        const payResponse = await databases.createDocument(
+          config.databaseId!,
+          config.payCollectionId!,
+          ID.unique(),
+          {
+            contractor_id: user.$id,
+            jobsite_id: assignedJobsite.id,
+            date: formattedDate,
+            pay: totalHours * rate
+          }
+        );
+  
+        if (payResponse) {
+          Alert.alert('Success', 'Hours and pay logged successfully!');
+          setHours('');
+          setMinutes('');
+          setHourlyRate('');
+        }
       }
     } catch (error) {
       console.error('Error logging hours and pay:', error);
-      Alert.alert('Error', 'An error occurred while logging the hours and pay.');
+      Alert.alert('Error', error instanceof Error ? error.message : 'An error occurred while logging hours');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
