@@ -94,6 +94,7 @@ const Index = () => {
           renderItem={({ item }) => (
             <View style={styles.assignmentItem}>
               <Text style={styles.jobsiteName}>{item.jobsite.name}</Text>
+              <Text style={styles.addressText}>{item.jobsite.address}</Text>
               <Text style={styles.assignmentDate}>
                 {new Date(item.date).toLocaleDateString()}
               </Text>
@@ -172,6 +173,12 @@ const styles = StyleSheet.create({
   messageText: {
     color: 'white',
     fontSize: 14,
+  },
+  addressText: {
+    fontSize: 14,
+    color: '#888888',
+    marginBottom: 8,
+    fontStyle: 'italic',
   },
 });
 

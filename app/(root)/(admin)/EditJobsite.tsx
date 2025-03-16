@@ -34,29 +34,37 @@ const EditJobsite = () => {
     }
   }, [jobsiteId]);
 
+  useEffect(() => {
+    // Clear message when switching jobsites
+    setMessage('');
+  }, [jobsiteId]);
+
   const loadJobsiteAndContractors = async () => {
     setLoading(true);
     try {
       // Load jobsite details
       const jobsiteData = await databases.getDocument(
-        process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID!,
-        process.env.EXPO_PUBLIC_APPWRITE_JOB_SITES_COLLECTION_ID!,
+        config.databaseId!,
+        config.jobsiteCollectionId!,
         jobsiteId as string
       );
       setJobsite(jobsiteData);
 
       // Load all contractors
       const contractorsResponse = await databases.listDocuments(
-        process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID!,
-        process.env.EXPO_PUBLIC_APPWRITE_CONTRACTORS_COLLECTION_ID!
+        config.databaseId!,
+        config.contractorCollectionId!
       );
       setContractors(contractorsResponse.documents);
 
-      // Load current assignments for this jobsite
+      // Load current assignments for this jobsite with message
       const assignmentsResponse = await databases.listDocuments(
-        process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID!,
-        process.env.EXPO_PUBLIC_APPWRITE_ASSIGNMENT_COLLECTION_ID!,
-        [Query.equal('job_site_id', jobsiteId)]
+        config.databaseId!,
+        config.assignmentCollectionId!,
+        [
+          Query.equal('job_site_id', jobsiteId),
+          Query.equal('date', new Date().toISOString().split('T')[0])
+        ]
       );
 
       // Set initially selected contractors
@@ -64,6 +72,14 @@ const EditJobsite = () => {
         (assignment) => assignment.contractor_id
       );
       setSelectedContractors(currentlyAssigned);
+
+      // Set existing message if any
+      if (assignmentsResponse.documents.length > 0) {
+        const existingMessage = assignmentsResponse.documents[0].message || '';
+        setMessage(existingMessage);
+      } else {
+        setMessage(''); // Clear message if no assignments
+      }
 
     } catch (error) {
       console.error('Error loading data:', error);
@@ -197,6 +213,7 @@ const EditJobsite = () => {
   // Helper function to process the assignments
   const processAssignments = async (currentAssignments: any[], existingByContractor: any) => {
     const overrides = [];
+    const today = new Date().toISOString().split('T')[0];
     
     // 1. Delete all current assignments for this jobsite
     const deleteCurrentPromises = currentAssignments.map(assignment =>
@@ -220,7 +237,7 @@ const EditJobsite = () => {
         );
       });
 
-    // 3. Create new assignments for selected contractors
+    // 3. Create new assignments for selected contractors with jobsite-specific message
     const createPromises = selectedContractors.map(contractorId =>
       databases.createDocument(
         config.databaseId!,
@@ -229,9 +246,9 @@ const EditJobsite = () => {
         {
           contractor_id: contractorId,
           job_site_id: jobsiteId,
-          date: new Date().toISOString().split('T')[0],
+          date: today,
           posted: false,
-          message: message.trim() || null
+          message: message.trim() || null // Remove jobsite_message field
         }
       )
     );

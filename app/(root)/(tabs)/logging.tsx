@@ -121,7 +121,8 @@ const Logging = () => {
 
   // Update handleDateChange to be more robust
   const handleDateChange = (event: any, selectedDate?: Date) => {
-    setShowDatePicker(Platform.OS === 'ios');
+    // Always hide the date picker regardless of platform
+    setShowDatePicker(false);
     
     if (selectedDate) {
       console.log('Date selected:', selectedDate);
