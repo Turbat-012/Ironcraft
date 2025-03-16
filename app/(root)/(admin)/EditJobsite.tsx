@@ -85,15 +85,21 @@ const EditJobsite = () => {
   const handleSave = async () => {
     setLoading(true);
     try {
-      // Delete existing unposted assignments
-      const currentAssignments = await databases.listDocuments(
+      // Get all unposted assignments
+      const existingAssignments = await databases.listDocuments(
         config.databaseId!,
         config.assignmentCollectionId!,
-        [Query.equal('job_site_id', jobsiteId), Query.equal('posted', false)]
+        [Query.equal('posted', false)]
       );
 
+      // Filter assignments for selected contractors
+      const assignmentsToDelete = existingAssignments.documents.filter(
+        assignment => selectedContractors.includes(assignment.contractor_id)
+      );
+
+      // Delete existing unposted assignments
       await Promise.all(
-        currentAssignments.documents.map(assignment =>
+        assignmentsToDelete.map(assignment =>
           databases.deleteDocument(
             config.databaseId!,
             config.assignmentCollectionId!,
@@ -113,7 +119,7 @@ const EditJobsite = () => {
             job_site_id: jobsiteId,
             date: new Date().toISOString(),
             posted: false,
-            message: message.trim() || null // Only include message if it's not empty
+            message: message.trim() || null
           }
         )
       );
