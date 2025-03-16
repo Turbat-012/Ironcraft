@@ -85,69 +85,167 @@ const EditJobsite = () => {
   const handleSave = async () => {
     setLoading(true);
     try {
-      // Get current unposted assignments for this jobsite
+      const today = new Date().toISOString().split('T')[0];
+
+      // Get ALL current assignments for this jobsite
       const currentAssignments = await databases.listDocuments(
         config.databaseId!,
         config.assignmentCollectionId!,
         [
           Query.equal('job_site_id', jobsiteId),
+          Query.equal('date', today),
           Query.equal('posted', false)
         ]
       );
 
-      // Get IDs of currently assigned contractors
-      const currentlyAssignedIds = currentAssignments.documents.map(
-        assignment => assignment.contractor_id
+      // Get assignments for selected contractors on other jobsites
+      const otherAssignments = await databases.listDocuments(
+        config.databaseId!,
+        config.assignmentCollectionId!,
+        [
+          Query.notEqual('job_site_id', jobsiteId),
+          Query.equal('date', today)
+        ]
       );
 
-      // Determine which contractors to remove (in current but not in selected)
-      const contractorsToRemove = currentlyAssignedIds.filter(
-        id => !selectedContractors.includes(id)
-      );
-
-      // Determine which contractors to add (in selected but not in current)
-      const contractorsToAdd = selectedContractors.filter(
-        id => !currentlyAssignedIds.includes(id)
-      );
-
-      // Delete assignments for removed contractors
-      const deletePromises = currentAssignments.documents
-        .filter(assignment => contractorsToRemove.includes(assignment.contractor_id))
-        .map(assignment =>
-          databases.deleteDocument(
+      // Fetch jobsite details for other assignments
+      const jobsiteDetails = await Promise.all(
+        otherAssignments.documents.map(async (assignment) => {
+          const jobsite = await databases.getDocument(
             config.databaseId!,
-            config.assignmentCollectionId!,
-            assignment.$id
-          )
-        );
-
-      // Create new assignments for added contractors
-      const createPromises = contractorsToAdd.map(contractorId =>
-        databases.createDocument(
-          config.databaseId!,
-          config.assignmentCollectionId!,
-          ID.unique(),
-          {
-            contractor_id: contractorId,
-            job_site_id: jobsiteId,
-            date: new Date().toISOString(),
-            posted: false,
-            message: message.trim() || null
-          }
-        )
+            config.jobsiteCollectionId!,
+            assignment.job_site_id
+          );
+          return {
+            ...assignment,
+            jobsiteName: jobsite.name
+          };
+        })
       );
 
-      // Execute all operations
-      await Promise.all([...deletePromises, ...createPromises]);
+      // Group assignments by contractor
+      const existingByContractor = jobsiteDetails.reduce((acc, assignment) => {
+        if (selectedContractors.includes(assignment.contractor_id)) {
+          acc[assignment.contractor_id] = {
+            assignmentId: assignment.$id,
+            jobsiteName: assignment.jobsiteName,
+            posted: assignment.posted
+          };
+        }
+        return acc;
+      }, {});
 
-      Alert.alert('Success', 'Assignments updated successfully');
-      router.back();
+      // Check for posted assignments that would be overridden
+      const postedOverrides = selectedContractors
+        .filter(contractorId => 
+          existingByContractor[contractorId] && 
+          existingByContractor[contractorId].posted
+        )
+        .map(contractorId => ({
+          contractorId,
+          jobsite: existingByContractor[contractorId].jobsiteName
+        }));
+
+      // If there are posted assignments to override, ask for confirmation
+      if (postedOverrides.length > 0) {
+        return new Promise((resolve) => {
+          Alert.alert(
+            'Warning',
+            `Some contractors already have posted assignments for today:\n\n${
+              postedOverrides.map(o => `• ${o.jobsite}`).join('\n')
+            }\n\nDo you want to override these assignments?`,
+            [
+              {
+                text: 'Cancel',
+                style: 'cancel',
+                onPress: () => {
+                  setLoading(false);
+                  resolve(false);
+                }
+              },
+              {
+                text: 'Override',
+                style: 'destructive',
+                onPress: async () => {
+                  try {
+                    await processAssignments(currentAssignments.documents, existingByContractor);
+                    resolve(true);
+                  } catch (error) {
+                    console.error('Error processing assignments:', error);
+                    Alert.alert('Error', 'Failed to update assignments');
+                    resolve(false);
+                  }
+                  setLoading(false);
+                }
+              }
+            ]
+          );
+        });
+      }
+
+      // If no posted assignments to override, proceed normally
+      await processAssignments(currentAssignments.documents, existingByContractor);
+
     } catch (error) {
       console.error('Error saving assignments:', error);
       Alert.alert('Error', 'Failed to update assignments');
     } finally {
       setLoading(false);
     }
+  };
+
+  // Helper function to process the assignments
+  const processAssignments = async (currentAssignments: any[], existingByContractor: any) => {
+    const overrides = [];
+    
+    // 1. Delete all current assignments for this jobsite
+    const deleteCurrentPromises = currentAssignments.map(assignment =>
+      databases.deleteDocument(
+        config.databaseId!,
+        config.assignmentCollectionId!,
+        assignment.$id
+      )
+    );
+
+    // 2. Delete assignments from other jobsites
+    const deleteOtherPromises = selectedContractors
+      .filter(contractorId => existingByContractor[contractorId])
+      .map(contractorId => {
+        const existing = existingByContractor[contractorId];
+        overrides.push(existing.jobsiteName);
+        return databases.deleteDocument(
+          config.databaseId!,
+          config.assignmentCollectionId!,
+          existing.assignmentId
+        );
+      });
+
+    // 3. Create new assignments for selected contractors
+    const createPromises = selectedContractors.map(contractorId =>
+      databases.createDocument(
+        config.databaseId!,
+        config.assignmentCollectionId!,
+        ID.unique(),
+        {
+          contractor_id: contractorId,
+          job_site_id: jobsiteId,
+          date: new Date().toISOString().split('T')[0],
+          posted: false,
+          message: message.trim() || null
+        }
+      )
+    );
+
+    // Execute all operations
+    await Promise.all([...deleteCurrentPromises, ...deleteOtherPromises, ...createPromises]);
+
+    const overrideCount = overrides.length;
+    const successMessage = overrideCount > 0 
+      ? `Assignments updated successfully. Overrode ${overrideCount} existing assignment(s) from: ${overrides.join(', ')}`
+      : 'Assignments updated successfully.';
+
+    Alert.alert('Success', successMessage);
+    router.back();
   };
 
   const filteredContractors = contractors.filter(contractor =>
