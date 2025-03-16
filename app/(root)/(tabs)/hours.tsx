@@ -84,27 +84,77 @@ const Hours = () => {
       if (dailyHours.length === 0) {
         await handleFetchHours();
         
-        // Check if fetch was successful
         if (dailyHours.length === 0) {
           Alert.alert('Error', 'No hours found for selected date range.');
           return;
         }
       }
 
+      console.log('Step 1 - Start and End dates:', {
+        start: startDate.toISOString().split('T')[0],
+        end: endDate.toISOString().split('T')[0]
+      });
+
+      // Fetch assignments for the date range
+      const assignmentsResponse = await databases.listDocuments(
+        config.databaseId!,
+        config.assignmentCollectionId!,
+        [
+          Query.equal('contractor_id', user.$id),
+          Query.equal('posted', true)
+        ]
+      );
+
+      console.log('Step 2 - Assignments found:', assignmentsResponse.documents);
+
       // Create a map of date to jobsite
       const jobsitesByDate = new Map();
       
-      // Format daily hours to match exactly how it's shown in the list
-      const formattedDailyHours = dailyHours.map(day => ({
-        date: new Date(day.date).toISOString().split('T')[0],
-        jobsite: day.jobsite,
-        hours: parseFloat(day.hours),
-        hourly_rate: day.hourlyRate, // Use hourlyRate instead of hourly_rate
-        pay: day.hours * day.hourlyRate // Calculate pay using hourlyRate
-      }));
+      // Fetch jobsite details for each assignment
+      for (const assignment of assignmentsResponse.documents) {
+        try {
+          // Convert assignment date to YYYY-MM-DD format for comparison
+          const assignmentDate = new Date(assignment.date).toISOString().split('T')[0];
+          
+          const jobsite = await databases.getDocument(
+            config.databaseId!,
+            config.jobsiteCollectionId!,
+            assignment.job_site_id
+          );
 
-      console.log('Daily hours before invoice:', dailyHours); // Debug log
-      console.log('Formatted daily hours for invoice:', formattedDailyHours); // Debug log
+          console.log('Step 3 - Jobsite found for date:', {
+            date: assignmentDate,
+            jobsiteName: jobsite.name,
+            jobsiteId: jobsite.$id
+          });
+
+          jobsitesByDate.set(assignmentDate, jobsite.name);
+        } catch (error) {
+          console.error('Error fetching jobsite:', error);
+        }
+      }
+
+      console.log('Step 4 - Jobsites by date map:', Object.fromEntries(jobsitesByDate));
+
+      // Format daily hours with jobsite information
+      const formattedDailyHours = dailyHours.map(day => {
+        const dateKey = new Date(day.date).toISOString().split('T')[0];
+        console.log('Step 5 - Processing day:', {
+          dateKey,
+          foundJobsite: jobsitesByDate.get(dateKey),
+          originalDate: day.date
+        });
+
+        return {
+          date: dateKey,
+          jobsite: jobsitesByDate.get(dateKey) || 'Unknown Site',
+          hours: parseFloat(day.hours),
+          hourly_rate: day.hourlyRate,
+          pay: day.hours * day.hourlyRate
+        };
+      });
+
+      console.log('Step 6 - Final formatted hours:', formattedDailyHours);
 
       const invoiceData = {
         contractorName: user.contractorData.name,
