@@ -1,22 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, ScrollView, Platform } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, ScrollView, Platform, FlatList } from 'react-native';
 import { databases } from '@/lib/appwrite';
 import { useGlobalContext } from '@/lib/global-provider';
 import { ID, Query } from 'react-native-appwrite';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import {config} from '@/constants/config';
-
-// export const config = {
-//   platform: "com.jsm.ironcraft",
-//   endpoint: process.env.EXPO_PUBLIC_APPWRITE_ENDPOINT,
-//   projectId: process.env.EXPO_PUBLIC_APPWRITE_PROJECT_ID,
-//   databaseId: process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID,
-//   contractorCollectionId: process.env.EXPO_PUBLIC_APPWRITE_CONTRACTORS_COLLECTION_ID,
-//   hoursCollectionId: process.env.EXPO_PUBLIC_APPWRITE_HOURS_COLLECTION_ID,
-//   jobsiteCollectionId: process.env.EXPO_PUBLIC_APPWRITE_JOB_SITES_COLLECTION_ID,
-//   assignmentCollectionId: process.env.EXPO_PUBLIC_APPWRITE_ASSIGNMENT_COLLECTION_ID,
-// };
 
 const Index = () => {
   const { user, loading } = useGlobalContext();
@@ -96,33 +85,39 @@ const Index = () => {
   }
 
   return (
-    <ScrollView style={styles.container}>
-      <SafeAreaView>
-        <Text style={styles.title}>Upcoming Assignments</Text>
+    <SafeAreaView style={styles.container}>
+      <Text style={styles.title}>Upcoming Assignments</Text>
 
-        {assignments.length > 0 ? (
-          assignments.map((assignment) => (
-            <View key={assignment.$id} style={styles.assignmentItem}>
-              <Text style={styles.dateText}>
-                {new Date(assignment.date).toLocaleDateString()}
+      {assignments.length > 0 ? (
+        <FlatList
+          data={assignments}
+          renderItem={({ item }) => (
+            <View style={styles.assignmentItem}>
+              <Text style={styles.jobsiteName}>{item.jobsite.name}</Text>
+              <Text style={styles.assignmentDate}>
+                {new Date(item.date).toLocaleDateString()}
               </Text>
-              <Text style={styles.jobsiteText}>
-                {assignment.jobsite.name}
-              </Text>
+              {item.message && (
+                <View style={styles.messageContainer}>
+                  <Text style={styles.messageLabel}>Message:</Text>
+                  <Text style={styles.messageText}>{item.message}</Text>
+                </View>
+              )}
             </View>
-          ))
-        ) : (
-          <Text style={styles.noAssignmentsText}>No upcoming assignments found.</Text>
-        )}
-      </SafeAreaView>
-    </ScrollView>
+          )}
+          keyExtractor={(item) => item.$id}
+          contentContainerStyle={{ padding: 16 }}
+        />
+      ) : (
+        <Text style={styles.noAssignmentsText}>No upcoming assignments found.</Text>
+      )}
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
     backgroundColor: '#000000',
   },
   title: {
@@ -152,7 +147,32 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#ffffff',
     textAlign: 'center',
-  }
+  },
+  jobsiteName: {
+    fontSize: 18,
+    color: '#ffffff',
+  },
+  assignmentDate: {
+    fontSize: 16,
+    color: '#4CAF50',
+    marginBottom: 4,
+    fontWeight: 'bold',
+  },
+  messageContainer: {
+    marginTop: 8,
+    padding: 8,
+    backgroundColor: '#444',
+    borderRadius: 4,
+  },
+  messageLabel: {
+    color: '#ccc',
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  messageText: {
+    color: 'white',
+    fontSize: 14,
+  },
 });
 
 export default Index;

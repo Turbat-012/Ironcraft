@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Button, Alert, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, Button, Alert, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { databases } from '@/lib/appwrite';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -25,6 +25,7 @@ const EditJobsite = () => {
   const [contractors, setContractors] = useState<any[]>([]);
   const [selectedContractors, setSelectedContractors] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<string>('');
 
   useEffect(() => {
     if (jobsiteId) {
@@ -100,7 +101,7 @@ const EditJobsite = () => {
         )
       );
 
-      // Create new assignments
+      // Create new assignments with message
       const createPromises = selectedContractors.map(contractorId =>
         databases.createDocument(
           config.databaseId!,
@@ -110,7 +111,8 @@ const EditJobsite = () => {
             contractor_id: contractorId,
             job_site_id: jobsiteId,
             date: new Date().toISOString(),
-            posted: false
+            posted: false,
+            message: message.trim() || null // Only include message if it's not empty
           }
         )
       );
@@ -128,31 +130,58 @@ const EditJobsite = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>
-        Assign Contractors to {jobsite?.name || 'Loading...'}
-      </Text>
-      <ScrollView style={styles.contractorList}>
-        {contractors.map((contractor) => (
-          <TouchableOpacity
-            key={contractor.$id}
-            style={[
-              styles.contractorItem,
-              selectedContractors.includes(contractor.$id) && styles.selectedContractorItem,
-            ]}
-            onPress={() => handleContractorSelection(contractor.$id)}
+      <View style={styles.contentContainer}>
+        <Text style={styles.title}>
+          Assign Contractors to {jobsite?.name || 'Loading...'}
+        </Text>
+        
+        {/* Main content area with contractors list */}
+        <View style={styles.mainContent}>
+          <ScrollView 
+            style={styles.contractorList}
+            contentContainerStyle={styles.contractorListContent}
           >
-            <Text style={styles.contractorName}>{contractor.name}</Text>
-          </TouchableOpacity>
-          
-        ))}
-      </ScrollView>
-      <CustomButton 
-        title={loading ? 'Updating...' : 'Update Assignments'} 
-        handlePress={handleSave}
-        containerStyles="mt-7 bg-blue-500"
-        isLoading={loading}
-        textStyles={undefined}
-        />
+            {contractors.map((contractor) => (
+              <TouchableOpacity
+                key={contractor.$id}
+                style={[
+                  styles.contractorItem,
+                  selectedContractors.includes(contractor.$id) && styles.selectedContractorItem,
+                ]}
+                onPress={() => handleContractorSelection(contractor.$id)}
+              >
+                <Text style={styles.contractorName}>{contractor.name}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* Bottom section with message input and button */}
+        <View style={styles.bottomSection}>
+          <View style={styles.messageContainer}>
+            <Text style={styles.messageLabel}>Additional Message (Optional):</Text>
+            <TextInput
+              style={styles.messageInput}
+              value={message}
+              onChangeText={setMessage}
+              placeholder="Enter message for contractors..."
+              placeholderTextColor="#666"
+              multiline
+              numberOfLines={3}
+            />
+          </View>
+
+          <View style={styles.buttonContainer}>
+            <CustomButton 
+              title={loading ? 'Updating...' : 'Update Assignments'} 
+              handlePress={handleSave}
+              containerStyles="bg-blue-500"
+              isLoading={loading}
+              textStyles={undefined}
+            />
+          </View>
+        </View>
+      </View>
     </SafeAreaView>
   );
 };
@@ -161,18 +190,29 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: 'black',
+  },
+  contentContainer: {
+    flex: 1,
     padding: 16,
+    paddingBottom: 24, // Add extra padding at bottom
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
     color: 'white',
-    marginBottom: 20,
+    marginBottom: 16,
     textAlign: 'center',
   },
+  mainContent: {
+    flex: 1,
+    minHeight: 200, // Ensure minimum height for content
+    maxHeight: '50%', // Limit maximum height
+  },
   contractorList: {
-    maxHeight: '70%',
-    marginBottom: 20,
+    flex: 1,
+  },
+  contractorListContent: {
+    paddingBottom: 8,
   },
   contractorItem: {
     padding: 16,
@@ -187,6 +227,32 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
   },
+  bottomSection: {
+    marginTop: 16,
+    paddingBottom: 16,
+  },
+  messageContainer: {
+    marginBottom: 16,
+  },
+  messageLabel: {
+    color: 'white',
+    fontSize: 16,
+    marginBottom: 8,
+  },
+  messageInput: {
+    backgroundColor: '#333333',
+    color: 'white',
+    borderRadius: 5,
+    padding: 12,
+    fontSize: 16,
+    minHeight: 80,
+    maxHeight: 100, // Reduced max height
+    textAlignVertical: 'top'
+  },
+  buttonContainer: {
+    paddingHorizontal: 8,
+    marginBottom: 8,
+  }
 });
 
 export default EditJobsite;

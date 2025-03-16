@@ -90,11 +90,6 @@ const Hours = () => {
         }
       }
 
-      console.log('Step 1 - Start and End dates:', {
-        start: startDate.toISOString().split('T')[0],
-        end: endDate.toISOString().split('T')[0]
-      });
-
       // Fetch assignments for the date range
       const assignmentsResponse = await databases.listDocuments(
         config.databaseId!,
@@ -104,8 +99,6 @@ const Hours = () => {
           Query.equal('posted', true)
         ]
       );
-
-      console.log('Step 2 - Assignments found:', assignmentsResponse.documents);
 
       // Create a map of date to jobsite
       const jobsitesByDate = new Map();
@@ -122,29 +115,15 @@ const Hours = () => {
             assignment.job_site_id
           );
 
-          console.log('Step 3 - Jobsite found for date:', {
-            date: assignmentDate,
-            jobsiteName: jobsite.name,
-            jobsiteId: jobsite.$id
-          });
-
           jobsitesByDate.set(assignmentDate, jobsite.name);
         } catch (error) {
           console.error('Error fetching jobsite:', error);
         }
       }
 
-      console.log('Step 4 - Jobsites by date map:', Object.fromEntries(jobsitesByDate));
-
       // Format daily hours with jobsite information
       const formattedDailyHours = dailyHours.map(day => {
         const dateKey = new Date(day.date).toISOString().split('T')[0];
-        console.log('Step 5 - Processing day:', {
-          dateKey,
-          foundJobsite: jobsitesByDate.get(dateKey),
-          originalDate: day.date
-        });
-
         return {
           date: dateKey,
           jobsite: jobsitesByDate.get(dateKey) || 'Unknown Site',
@@ -153,8 +132,6 @@ const Hours = () => {
           pay: day.hours * day.hourlyRate
         };
       });
-
-      console.log('Step 6 - Final formatted hours:', formattedDailyHours);
 
       const invoiceData = {
         contractorName: user.contractorData.name,
