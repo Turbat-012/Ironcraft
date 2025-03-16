@@ -35,14 +35,11 @@ const Logging = () => {
     setHourlyRate(text);
   };
 
-  // Update the fetchJobsiteForDate function
+  // Modify the fetchJobsiteForDate function to not show errors for unassigned dates
   const fetchJobsiteForDate = async (selectedDate: Date) => {
     try {
-      // Format date to match the stored format (YYYY-MM-DD)
       const dateString = selectedDate.toISOString().split('T')[0];
-      console.log('Searching assignments for date:', dateString);
-  
-      // First, get all posted assignments for this contractor
+      
       const assignmentsResponse = await databases.listDocuments(
         config.databaseId!,
         config.assignmentCollectionId!,
@@ -52,24 +49,16 @@ const Logging = () => {
         ]
       );
   
-      // console.log('All assignments found:', assignmentsResponse.documents);
-  
-      // Find assignment matching the selected date
       const matchingAssignment = assignmentsResponse.documents.find(
         assignment => assignment.date.split('T')[0] === dateString
       );
   
       if (matchingAssignment) {
-        // console.log('Matching assignment found:', matchingAssignment);
-  
-        // Get jobsite details
         const jobsite = await databases.getDocument(
           config.databaseId!,
           config.jobsiteCollectionId!,
           matchingAssignment.job_site_id
         );
-  
-        // console.log('Jobsite details:', jobsite);
   
         if (jobsite) {
           setAssignedJobsite({
@@ -77,11 +66,10 @@ const Logging = () => {
             name: jobsite.name
           });
         } else {
-          console.log('No jobsite found for assignment');
           setAssignedJobsite(null);
         }
       } else {
-        console.log('No assignment found for date:', dateString);
+        // Simply clear the assigned jobsite without showing an error
         setAssignedJobsite(null);
       }
     } catch (error) {
@@ -153,46 +141,53 @@ const Logging = () => {
   
     const totalHours = parseFloat(hours || '0') + parseFloat(minutes || '0') / 60;
     const rate = parseFloat(hourlyRate);
+    const formattedDate = date.toISOString().split('T')[0];
   
     try {
       setIsSubmitting(true);
-      
-      // Format date consistently
-      const formattedDate = date.toISOString().split('T')[0];
-      console.log('Submitting for date:', formattedDate); // Debug log
-      
-      // Log hours
-      const hoursResponse = await logHours(
-        user.$id, 
-        totalHours, 
-        formattedDate,
-        rate
+  
+      // Check for existing hours on this date
+      const existingHours = await databases.listDocuments(
+        config.databaseId!,
+        config.hoursCollectionId!,
+        [
+          Query.equal('contractor_id', user.$id),
+          Query.equal('date', formattedDate)
+        ]
       );
   
-      // Log pay with jobsite
-      if (hoursResponse) {
-        const payResponse = await databases.createDocument(
+      // Delete existing record if it exists
+      if (existingHours.documents.length > 0) {
+        await databases.deleteDocument(
           config.databaseId!,
-          config.payCollectionId!,
-          ID.unique(),
-          {
-            contractor_id: user.$id,
-            jobsite_id: selectedJobsite.id,
-            date: formattedDate,
-            pay: totalHours * rate
-          }
+          config.hoursCollectionId!,
+          existingHours.documents[0].$id
         );
-  
-        if (payResponse) {
-          Alert.alert('Success', 'Hours and pay logged successfully!');
-          setHours('');
-          setMinutes('');
-          setHourlyRate('');
-        }
       }
+  
+      // Create new record
+      const response = await logHours(
+        user.$id,
+        totalHours,
+        formattedDate,
+        rate,
+        selectedJobsite.id
+      );
+  
+      Alert.alert(
+        'Success', 
+        existingHours.documents.length > 0 
+          ? 'Hours updated successfully' 
+          : 'Hours logged successfully'
+      );
+  
+      // Reset form
+      setHours('');
+      setMinutes('');
+      setHourlyRate('');
     } catch (error) {
-      console.error('Error logging hours and pay:', error);
-      Alert.alert('Error', error instanceof Error ? error.message : 'An error occurred while logging hours');
+      console.error('Error logging hours:', error);
+      Alert.alert('Error', 'Failed to log hours');
     } finally {
       setIsSubmitting(false);
     }
@@ -202,6 +197,7 @@ const Logging = () => {
     jobsite.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Update the renderJobsiteSelection function to show a neutral message
   const renderJobsiteSelection = () => {
     if (assignedJobsite) {
       return (
@@ -214,7 +210,7 @@ const Logging = () => {
   
     return (
       <View style={styles.jobsiteContainer}>
-        <Text style={styles.label}>No Assignment Found - Select Jobsite:</Text>
+        <Text style={styles.label}>Select Jobsite:</Text>
         <TextInput
           style={styles.searchInput}
           value={searchTerm}

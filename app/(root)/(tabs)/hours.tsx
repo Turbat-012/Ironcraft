@@ -33,22 +33,13 @@ const Hours = () => {
   };
 
   const handleFetchHours = async () => {
-    if (!user) {
-      Alert.alert('Error', 'User not found.');
-      return;
-    }
-
     try {
       const startDateString = startDate.toISOString().split('T')[0];
       const endDateString = endDate.toISOString().split('T')[0];
-      
-      // Fetch hours with jobsite information
-      const loggedHours = await getLoggedHours(user.$id, startDateString, endDateString);
 
-      // Fetch pay records
-      const payResponse = await databases.listDocuments(
-        config.databaseId,
-        config.payCollectionId,
+      const hoursResponse = await databases.listDocuments(
+        config.databaseId!,
+        config.hoursCollectionId!,
         [
           Query.equal('contractor_id', user.$id),
           Query.greaterThanEqual('date', startDateString),
@@ -56,24 +47,41 @@ const Hours = () => {
         ]
       );
 
-      const payByDate = payResponse.documents.reduce((acc, pay) => {
-        acc[pay.date] = pay.pay;
-        return acc;
-      }, {} as { [key: string]: number });
-
-      const dailyHoursData = loggedHours.map(log => ({
-        date: log.date,
-        hours: parseFloat(log.hours),
-        hourlyRate: log.hourly_rate || 0,
-        pay: log.hourly_rate ? log.hours * log.hourly_rate : (payByDate[log.date] || 0),
-        jobsite: log.jobsiteName // Add jobsite name to the data
-      }));
+      // Fetch jobsite names for each entry
+      const dailyHoursData = await Promise.all(
+        hoursResponse.documents.map(async log => {
+          try {
+            const jobsite = await databases.getDocument(
+              config.databaseId!,
+              config.jobsiteCollectionId!,
+              log.job_site_id  // Changed from jobsite_id to job_site_id
+            );
+            
+            return {
+              date: log.date,
+              hours: parseFloat(log.hours),
+              hourlyRate: log.hourly_rate,
+              pay: log.pay,
+              jobsite: jobsite.name
+            };
+          } catch (error) {
+            console.error('Error fetching jobsite:', error);
+            return {
+              date: log.date,
+              hours: parseFloat(log.hours),
+              hourlyRate: log.hourly_rate,
+              pay: log.pay,
+              jobsite: 'Unknown Site'
+            };
+          }
+        })
+      );
 
       setDailyHours(dailyHoursData);
       setTotalHours(dailyHoursData.reduce((sum, log) => sum + log.hours, 0));
-      setTotalPay(dailyHoursData.reduce((sum, log) => sum + (log.hours * log.hourlyRate), 0));
+      setTotalPay(dailyHoursData.reduce((sum, log) => sum + log.pay, 0));
     } catch (error) {
-      console.error('Error fetching logged hours and pay:', error);
+      console.error('Error fetching logged hours:', error);
       Alert.alert('Error', 'An error occurred while fetching the data.');
     }
   };
@@ -90,48 +98,14 @@ const Hours = () => {
         }
       }
 
-      // Fetch assignments for the date range
-      const assignmentsResponse = await databases.listDocuments(
-        config.databaseId!,
-        config.assignmentCollectionId!,
-        [
-          Query.equal('contractor_id', user.$id),
-          Query.equal('posted', true)
-        ]
-      );
-
-      // Create a map of date to jobsite
-      const jobsitesByDate = new Map();
-      
-      // Fetch jobsite details for each assignment
-      for (const assignment of assignmentsResponse.documents) {
-        try {
-          // Convert assignment date to YYYY-MM-DD format for comparison
-          const assignmentDate = new Date(assignment.date).toISOString().split('T')[0];
-          
-          const jobsite = await databases.getDocument(
-            config.databaseId!,
-            config.jobsiteCollectionId!,
-            assignment.job_site_id
-          );
-
-          jobsitesByDate.set(assignmentDate, jobsite.name);
-        } catch (error) {
-          console.error('Error fetching jobsite:', error);
-        }
-      }
-
-      // Format daily hours with jobsite information
-      const formattedDailyHours = dailyHours.map(day => {
-        const dateKey = new Date(day.date).toISOString().split('T')[0];
-        return {
-          date: dateKey,
-          jobsite: jobsitesByDate.get(dateKey) || 'Unknown Site',
-          hours: parseFloat(day.hours),
-          hourly_rate: day.hourlyRate,
-          pay: day.hours * day.hourlyRate
-        };
-      });
+      // Format daily hours directly from our existing dailyHours state
+      const formattedDailyHours = dailyHours.map(day => ({
+        date: new Date(day.date).toISOString().split('T')[0],
+        jobsite: day.jobsite,
+        hours: day.hours,
+        hourly_rate: day.hourlyRate,
+        pay: day.pay
+      }));
 
       const invoiceData = {
         contractorName: user.contractorData.name,

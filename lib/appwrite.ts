@@ -134,52 +134,30 @@ export const createUser = async (email: string, password: string, name: string) 
     }
 };
 
-export const logHours = async (contractorId: string, hours: Float, date: string, hourlyRate: number) => {
+export const logHours = async (
+  contractorId: string,
+  hours: number,
+  date: string,
+  hourlyRate: number,
+  jobsiteId: string
+) => {
   try {
-    console.log('Input date:', date); // Debug log
-
-    // Get all posted assignments for this contractor
-    const assignmentsResponse = await databases.listDocuments(
-      config.databaseId!,
-      config.assignmentCollectionId!,
-      [
-        Query.equal('contractor_id', contractorId),
-        Query.equal('posted', true)
-      ]
-    );
-
-    console.log('All assignments:', assignmentsResponse.documents); // Debug log
-
-    // Find assignment matching the selected date
-    const matchingAssignment = assignmentsResponse.documents.find(
-      assignment => assignment.date.split('T')[0] === date
-    );
-
-    console.log('Matching assignment:', matchingAssignment); // Debug log
-
-    if (!matchingAssignment) {
-      const availableDates = assignmentsResponse.documents
-        .map(a => new Date(a.date).toLocaleDateString('en-AU'))
-        .join(', ');
-
-      throw new Error(`No assignment found for date: ${new Date(date).toLocaleDateString('en-AU')}. Available assignments: ${availableDates}`);
-    }
-
-    // Create hours log with hourly rate
-    const newLog = await databases.createDocument(
+    // Create single document in hours collection with pay included
+    const hoursDoc = await databases.createDocument(
       config.databaseId!,
       config.hoursCollectionId!,
       ID.unique(),
       {
         contractor_id: contractorId,
-        hours,
-        date,
-        job_site_id: matchingAssignment.job_site_id,
-        hourly_rate: hourlyRate
+        hours: hours,
+        date: date,
+        hourly_rate: hourlyRate,
+        pay: hours * hourlyRate,
+        job_site_id: jobsiteId  // Changed from jobsite_id to job_site_id
       }
     );
 
-    return newLog;
+    return hoursDoc;
   } catch (error) {
     console.error('Error logging hours:', error);
     throw error;
