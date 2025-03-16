@@ -1,4 +1,4 @@
-import { View, Text, TextInput, Button, Alert, StyleSheet, Platform, TouchableWithoutFeedback, Keyboard } from 'react-native';
+import { View, Text, TextInput, Button, Alert, StyleSheet, Platform, TouchableWithoutFeedback, Keyboard, ScrollView, TouchableOpacity } from 'react-native';
 import React, { useState, useEffect } from 'react';  // Add useEffect to imports
 import axios from 'axios';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -8,18 +8,7 @@ import CustomButton from '@/components/CustomButton';
 import { logHours, databases } from '@/lib/appwrite';
 import { ID, Query } from 'react-native-appwrite';
 import { config } from '@/constants/config';
-
-// export const config = {
-//   platform: "com.jsm.ironcraft",
-//   endpoint: process.env.EXPO_PUBLIC_APPWRITE_ENDPOINT,
-//   projectId: process.env.EXPO_PUBLIC_APPWRITE_PROJECT_ID,
-//   databaseId: process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID,
-//   contractorCollectionId: process.env.EXPO_PUBLIC_APPWRITE_CONTRACTORS_COLLECTION_ID,
-//   hoursCollectionId: process.env.EXPO_PUBLIC_APPWRITE_HOURS_COLLECTION_ID,
-//   jobsiteCollectionId: process.env.EXPO_PUBLIC_APPWRITE_JOB_SITES_COLLECTION_ID,
-//   assignmentCollectionId: process.env.EXPO_PUBLIC_APPWRITE_ASSIGNMENT_COLLECTION_ID,
-//   payCollectionId: process.env.EXPO_PUBLIC_APPWRITE_PAY_COLLECTION_ID,
-// };
+import { Picker } from '@react-native-picker/picker';
 
 const Logging = () => {
   const { user } = useGlobalContext();
@@ -30,6 +19,9 @@ const Logging = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hourlyRate, setHourlyRate] = useState('');
   const [assignedJobsite, setAssignedJobsite] = useState<{ id: string; name: string } | null>(null);
+  const [jobsites, setJobsites] = useState<Array<{ id: string; name: string }>>([]);
+  const [manualJobsiteId, setManualJobsiteId] = useState<string>('');
+  const [searchTerm, setSearchTerm] = useState('');
 
   const handleHoursChange = (text: string) => {
     setHours(text);
@@ -98,11 +90,32 @@ const Logging = () => {
     }
   };
 
+  // Add this new function after fetchJobsiteForDate
+  const fetchAllJobsites = async () => {
+    try {
+      const response = await databases.listDocuments(
+        config.databaseId!,
+        config.jobsiteCollectionId!
+      );
+      const formattedJobsites = response.documents.map(doc => ({
+        id: doc.$id,
+        name: doc.name
+      }));
+      setJobsites(formattedJobsites);
+      if (formattedJobsites.length > 0) {
+        setManualJobsiteId(formattedJobsites[0].id);
+      }
+    } catch (error) {
+      console.error('Error fetching jobsites:', error);
+    }
+  };
+
   // Update the useEffect to properly handle date changes
   useEffect(() => {
     if (user && date) {
       console.log('Fetching jobsite for user:', user.$id);
       fetchJobsiteForDate(date);
+      fetchAllJobsites(); // Add this line
     }
   }, [user, date]);
 
@@ -117,9 +130,13 @@ const Logging = () => {
     }
   };
 
+  // Modify handleSubmit to use manually selected jobsite if no assignment
   const handleSubmit = async () => {
-    if (!assignedJobsite) {
-      Alert.alert('Error', 'No jobsite assignment found for this date.');
+    const selectedJobsite = assignedJobsite || (manualJobsiteId ? 
+      jobsites.find(j => j.id === manualJobsiteId) : null);
+  
+    if (!selectedJobsite) {
+      Alert.alert('Error', 'Please select a jobsite.');
       return;
     }
   
@@ -159,7 +176,7 @@ const Logging = () => {
           ID.unique(),
           {
             contractor_id: user.$id,
-            jobsite_id: assignedJobsite.id,
+            jobsite_id: selectedJobsite.id,
             date: formattedDate,
             pay: totalHours * rate
           }
@@ -178,6 +195,53 @@ const Logging = () => {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const filteredJobsites = jobsites.filter(jobsite =>
+    jobsite.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const renderJobsiteSelection = () => {
+    if (assignedJobsite) {
+      return (
+        <View style={styles.jobsiteContainer}>
+          <Text style={styles.label}>Assigned Jobsite:</Text>
+          <Text style={styles.jobsiteText}>{assignedJobsite.name}</Text>
+        </View>
+      );
+    }
+  
+    return (
+      <View style={styles.jobsiteContainer}>
+        <Text style={styles.label}>No Assignment Found - Select Jobsite:</Text>
+        <TextInput
+          style={styles.searchInput}
+          value={searchTerm}
+          onChangeText={setSearchTerm}
+          placeholder="Search jobsites..."
+          placeholderTextColor="#666"
+        />
+        <ScrollView style={styles.jobsiteList}>
+          {filteredJobsites.map((jobsite) => (
+            <TouchableOpacity
+              key={jobsite.id}
+              style={[
+                styles.jobsiteItem,
+                manualJobsiteId === jobsite.id && styles.selectedJobsiteItem,
+              ]}
+              onPress={() => setManualJobsiteId(jobsite.id)}
+            >
+              <Text style={[
+                styles.jobsiteItemText,
+                manualJobsiteId === jobsite.id && styles.selectedJobsiteItemText
+              ]}>
+                {jobsite.name}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+    );
   };
 
   return (
@@ -222,12 +286,7 @@ const Logging = () => {
               maximumDate={new Date()}
             />
           )}
-          <View style={styles.jobsiteContainer}>
-            <Text style={styles.label}>Assigned Jobsite:</Text>
-            <Text style={styles.jobsiteText}>
-              {assignedJobsite ? assignedJobsite.name : 'No assignment found for this date'}
-            </Text>
-          </View>
+          {renderJobsiteSelection()}
           <CustomButton title="Submit" handlePress={handleSubmit} containerStyles="mt-7 bg-blue-500"
             isLoading={isSubmitting} textStyles={undefined} />      
         </View>
@@ -281,7 +340,35 @@ const styles = StyleSheet.create({
     color: '#4CAF50',
     fontSize: 18,
     fontWeight: 'bold',
-  }
+  },
+  searchInput: {
+    backgroundColor: '#333333',
+    color: 'white',
+    borderRadius: 5,
+    padding: 12,
+    fontSize: 16,
+    marginBottom: 12,
+  },
+  jobsiteList: {
+    maxHeight: 200,
+  },
+  jobsiteItem: {
+    padding: 12,
+    backgroundColor: '#333333',
+    marginBottom: 8,
+    borderRadius: 5,
+  },
+  selectedJobsiteItem: {
+    backgroundColor: '#0061FF',
+  },
+  jobsiteItemText: {
+    color: 'white',
+    fontSize: 16,
+  },
+  selectedJobsiteItemText: {
+    color: 'white',
+    fontWeight: 'bold',
+  },
 });
 
 export default Logging;
