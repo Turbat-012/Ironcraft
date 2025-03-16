@@ -26,6 +26,7 @@ const EditJobsite = () => {
   const [selectedContractors, setSelectedContractors] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string>('');
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     if (jobsiteId) {
@@ -128,6 +129,10 @@ const EditJobsite = () => {
     }
   };
 
+  const filteredContractors = contractors.filter(contractor =>
+    contractor.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.contentContainer}>
@@ -135,13 +140,24 @@ const EditJobsite = () => {
           Assign Contractors to {jobsite?.name || 'Loading...'}
         </Text>
         
-        {/* Main content area with contractors list */}
+        {/* Add search input */}
+        <View style={styles.searchContainer}>
+          <TextInput
+            style={styles.searchInput}
+            value={searchTerm}
+            onChangeText={setSearchTerm}
+            placeholder="Search contractors..."
+            placeholderTextColor="#666"
+          />
+        </View>
+        
+        {/* Main content area with contractors list - update to use filteredContractors */}
         <View style={styles.mainContent}>
           <ScrollView 
             style={styles.contractorList}
             contentContainerStyle={styles.contractorListContent}
           >
-            {contractors.map((contractor) => (
+            {filteredContractors.map((contractor) => (
               <TouchableOpacity
                 key={contractor.$id}
                 style={[
@@ -202,6 +218,18 @@ const styles = StyleSheet.create({
     color: 'white',
     marginBottom: 16,
     textAlign: 'center',
+  },
+  searchContainer: {
+    marginBottom: 16,
+    paddingHorizontal: 8,
+  },
+  searchInput: {
+    backgroundColor: '#333333',
+    color: 'white',
+    borderRadius: 5,
+    padding: 12,
+    fontSize: 16,
+    height: 44,
   },
   mainContent: {
     flex: 1,

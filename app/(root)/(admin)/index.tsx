@@ -1,4 +1,4 @@
-import { View, Text, Button, Alert, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, Button, Alert, FlatList, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { databases } from '@/lib/appwrite';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -119,6 +119,18 @@ const styles = StyleSheet.create({
   contractorName: {
     color: 'white',
   },
+  searchContainer: {
+    marginBottom: 16,
+    paddingHorizontal: 8,
+  },
+  searchInput: {
+    backgroundColor: '#333333',
+    color: 'white',
+    borderRadius: 5,
+    padding: 12,
+    fontSize: 16,
+    height: 44,
+  },
 });
 
 const Assign = () => {
@@ -128,6 +140,7 @@ const Assign = () => {
   const [loadingContractors, setLoadingContractors] = useState<{ [key: string]: boolean }>({});
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [expandedDate, setExpandedDate] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const router = useRouter();
 
   useFocusEffect(
@@ -333,6 +346,11 @@ const Assign = () => {
     }
   };
 
+  const filteredJobsites = jobsites.filter(jobsite =>
+    jobsite.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    jobsite.address.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   const renderItem = ({ item }: { item: any }) => (
     <View style={styles.jobsiteItem}>
       <View style={styles.jobsiteInfo}>
@@ -356,6 +374,16 @@ const Assign = () => {
   return (
     <SafeAreaView style={styles.container}>
       <Text style={styles.title}>Jobsite Assignments</Text>
+      
+      <View style={styles.searchContainer}>
+        <TextInput
+          style={styles.searchInput}
+          value={searchTerm}
+          onChangeText={setSearchTerm}
+          placeholder="Search jobsites..."
+          placeholderTextColor="#666"
+        />
+      </View>
       
       <View style={styles.dateSection}>
         <Text style={styles.dateLabel}>Select Date:</Text>
@@ -391,7 +419,7 @@ const Assign = () => {
         <Text style={styles.loadingText}>Loading...</Text>
       ) : (
         <FlatList     
-          data={jobsites}
+          data={filteredJobsites}
           keyExtractor={(item) => item.$id}
           renderItem={renderItem}
           contentContainerStyle={styles.listContainer}
