@@ -85,31 +85,44 @@ const EditJobsite = () => {
   const handleSave = async () => {
     setLoading(true);
     try {
-      // Get all unposted assignments
-      const existingAssignments = await databases.listDocuments(
+      // Get current unposted assignments for this jobsite
+      const currentAssignments = await databases.listDocuments(
         config.databaseId!,
         config.assignmentCollectionId!,
-        [Query.equal('posted', false)]
+        [
+          Query.equal('job_site_id', jobsiteId),
+          Query.equal('posted', false)
+        ]
       );
 
-      // Filter assignments for selected contractors
-      const assignmentsToDelete = existingAssignments.documents.filter(
-        assignment => selectedContractors.includes(assignment.contractor_id)
+      // Get IDs of currently assigned contractors
+      const currentlyAssignedIds = currentAssignments.documents.map(
+        assignment => assignment.contractor_id
       );
 
-      // Delete existing unposted assignments
-      await Promise.all(
-        assignmentsToDelete.map(assignment =>
+      // Determine which contractors to remove (in current but not in selected)
+      const contractorsToRemove = currentlyAssignedIds.filter(
+        id => !selectedContractors.includes(id)
+      );
+
+      // Determine which contractors to add (in selected but not in current)
+      const contractorsToAdd = selectedContractors.filter(
+        id => !currentlyAssignedIds.includes(id)
+      );
+
+      // Delete assignments for removed contractors
+      const deletePromises = currentAssignments.documents
+        .filter(assignment => contractorsToRemove.includes(assignment.contractor_id))
+        .map(assignment =>
           databases.deleteDocument(
             config.databaseId!,
             config.assignmentCollectionId!,
             assignment.$id
           )
-        )
-      );
+        );
 
-      // Create new assignments with message
-      const createPromises = selectedContractors.map(contractorId =>
+      // Create new assignments for added contractors
+      const createPromises = contractorsToAdd.map(contractorId =>
         databases.createDocument(
           config.databaseId!,
           config.assignmentCollectionId!,
@@ -124,12 +137,14 @@ const EditJobsite = () => {
         )
       );
 
-      await Promise.all(createPromises);
-      Alert.alert('Success', 'Contractors assigned successfully');
+      // Execute all operations
+      await Promise.all([...deletePromises, ...createPromises]);
+
+      Alert.alert('Success', 'Assignments updated successfully');
       router.back();
     } catch (error) {
       console.error('Error saving assignments:', error);
-      Alert.alert('Error', 'Failed to save assignments');
+      Alert.alert('Error', 'Failed to update assignments');
     } finally {
       setLoading(false);
     }
