@@ -1,5 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Button, Alert, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+import { 
+  View, 
+  Text, 
+  Button, 
+  Alert, 
+  StyleSheet, 
+  ScrollView, 
+  TouchableOpacity, 
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
+  Keyboard,
+  TouchableWithoutFeedback
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { databases } from '@/lib/appwrite';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -164,76 +177,84 @@ const EditJobsite = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      {isPosted && (
-        <View style={styles.postedBanner}>
-          <Text style={styles.postedText}>
-            ⚠️ Editing Posted Assignment
-          </Text>
-        </View>
-      )}
-      <View style={styles.contentContainer}>
-        <Text style={styles.title}>
-          Assign Contractors to {jobsite?.name || 'Loading...'}
-        </Text>
-        
-        {/* Add search input */}
-        <View style={styles.searchContainer}>
-          <TextInput
-            style={styles.searchInput}
-            value={searchTerm}
-            onChangeText={setSearchTerm}
-            placeholder="Search contractors..."
-            placeholderTextColor="#666"
-          />
-        </View>
-        
-        {/* Main content area with contractors list - update to use filteredContractors */}
-        <View style={styles.mainContent}>
-          <ScrollView 
-            style={styles.contractorList}
-            contentContainerStyle={styles.contractorListContent}
-          >
-            {filteredContractors.map((contractor) => (
-              <TouchableOpacity
-                key={contractor.$id}
-                style={[
-                  styles.contractorItem,
-                  selectedContractors.includes(contractor.$id) && styles.selectedContractorItem,
-                ]}
-                onPress={() => handleContractorSelection(contractor.$id)}
-              >
-                <Text style={styles.contractorName}>{contractor.name}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+        style={{ flex: 1 }}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <View style={styles.contentContainer}>
+            {isPosted && (
+              <View style={styles.postedBanner}>
+                <Text style={styles.postedText}>
+                  ⚠️ Editing Posted Assignment
+                </Text>
+              </View>
+            )}
+            
+            <Text style={styles.title}>
+              Assign Contractors to {jobsite?.name || 'Loading...'}
+            </Text>
+            
+            <View style={styles.searchContainer}>
+              <TextInput
+                style={styles.searchInput}
+                value={searchTerm}
+                onChangeText={setSearchTerm}
+                placeholder="Search contractors..."
+                placeholderTextColor="#666"
+              />
+            </View>
+            
+            <ScrollView 
+              style={styles.mainContent}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={true}
+              contentContainerStyle={styles.scrollContentContainer}
+            >
+              <View style={styles.contractorListContent}>
+                {filteredContractors.map((contractor) => (
+                  <TouchableOpacity
+                    key={contractor.$id}
+                    style={[
+                      styles.contractorItem,
+                      selectedContractors.includes(contractor.$id) && styles.selectedContractorItem,
+                    ]}
+                    onPress={() => handleContractorSelection(contractor.$id)}
+                  >
+                    <Text style={styles.contractorName}>{contractor.name}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
 
-        {/* Bottom section with message input and button */}
-        <View style={styles.bottomSection}>
-          <View style={styles.messageContainer}>
-            <Text style={styles.messageLabel}>Additional Message (Optional):</Text>
-            <TextInput
-              style={styles.messageInput}
-              value={message}
-              onChangeText={setMessage}
-              placeholder="Enter message for contractors..."
-              placeholderTextColor="#666"
-              multiline
-              numberOfLines={3}
-            />
-          </View>
+              <View style={styles.messageContainer}>
+                <Text style={styles.messageLabel}>Additional Message (Optional):</Text>
+                <TextInput
+                  style={styles.messageInput}
+                  value={message}
+                  onChangeText={setMessage}
+                  placeholder="Enter message for contractors..."
+                  placeholderTextColor="#666"
+                  multiline
+                  numberOfLines={3}
+                />
+              </View>              
+              {/* Add padding at bottom of scroll to account for button */}
+              <View style={{ height: 80 }} />
+            </ScrollView>
 
-          <View style={styles.buttonContainer}>
-            <CustomButton 
-              title={loading ? 'Updating...' : 'Update Assignments'} 
-              handlePress={handleSave}
-              containerStyles="bg-blue-500"
-              isLoading={loading}
-              textStyles={undefined}
-            />
+            <View style={styles.buttonContainer}>
+              <CustomButton 
+                title={loading ? 'Updating...' : 'Update Assignments'} 
+                handlePress={handleSave}
+                containerStyles="bg-blue-500"
+                isLoading={loading}
+                textStyles={undefined}
+              />
+            </View>
           </View>
-        </View>
-      </View>
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -246,7 +267,7 @@ const styles = StyleSheet.create({
   contentContainer: {
     flex: 1,
     padding: 16,
-    paddingBottom: 24, // Add extra padding at bottom
+    paddingBottom: Platform.OS === 'ios' ? 90 : 80, // Add padding for button
   },
   title: {
     fontSize: 24,
@@ -269,14 +290,12 @@ const styles = StyleSheet.create({
   },
   mainContent: {
     flex: 1,
-    minHeight: 200, // Ensure minimum height for content
-    maxHeight: '50%', // Limit maximum height
   },
   contractorList: {
     flex: 1,
   },
   contractorListContent: {
-    paddingBottom: 8,
+    paddingBottom: 16,
   },
   contractorItem: {
     padding: 16,
@@ -296,7 +315,9 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   messageContainer: {
+    marginTop: 16,
     marginBottom: 16,
+    paddingHorizontal: 8,
   },
   messageLabel: {
     color: 'white',
@@ -309,13 +330,21 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     padding: 12,
     fontSize: 16,
-    minHeight: 80,
-    maxHeight: 100, // Reduced max height
-    textAlignVertical: 'top'
+    minHeight: Platform.OS === 'ios' ? 80 : 100,
+    maxHeight: Platform.OS === 'ios' ? 100 : 120,
+    textAlignVertical: 'top',
+    textAlign: Platform.OS === 'ios' ? 'left' : 'left'
   },
   buttonContainer: {
-    paddingHorizontal: 8,
-    marginBottom: 8,
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'black',
+    padding: 16,
+    paddingBottom: Platform.OS === 'ios' ? 30 : 16,
+    borderTopWidth: 1,
+    borderTopColor: '#333',
   },
   postedBanner: {
     backgroundColor: '#FFA500',
@@ -327,6 +356,9 @@ const styles = StyleSheet.create({
     color: 'white',
     textAlign: 'center',
     fontWeight: 'bold',
+  },
+  scrollContentContainer: {
+    flexGrow: 1,
   }
 });
 
