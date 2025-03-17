@@ -2,7 +2,7 @@ import { View, Text, Button, Alert, FlatList, StyleSheet, TouchableOpacity, Text
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { databases } from '@/lib/appwrite';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { Query } from 'react-native-appwrite';
+import { Query, ID } from 'react-native-appwrite';
 import { useRouter } from 'expo-router';
 import CustomButton from '@/components/CustomButton';
 import React, { useState, useEffect, useCallback } from 'react';
@@ -131,12 +131,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     height: 44,
   },
-  postedStatus: {
-    color: '#4CAF50',
-    fontSize: 14,
-    marginTop: 4,
-    fontStyle: 'italic'
-  }
 });
 
 const Assign = () => {
@@ -233,6 +227,44 @@ const Assign = () => {
   
     setLoading(true);
     try {
+      // Check for existing posted assignments on the selected date
+      const existingAssignments = await databases.listDocuments(
+        config.databaseId!,
+        config.assignmentCollectionId!,
+        [
+          Query.equal('posted', true),
+          Query.equal('date', selectedDate.toISOString().split('T')[0])
+        ]
+      );
+  
+      if (existingAssignments.documents.length > 0) {
+        const shouldOverride = await new Promise((resolve) => {
+          Alert.alert(
+            'Warning',
+            'There are existing assignments for this date. Do you want to override them?',
+            [
+              { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+              { text: 'Override', style: 'destructive', onPress: () => resolve(true) }
+            ]
+          );
+        });
+  
+        if (!shouldOverride) {
+          setLoading(false);
+          return;
+        }
+  
+        // Delete existing assignments
+        const deletePromises = existingAssignments.documents.map(assignment =>
+          databases.deleteDocument(
+            config.databaseId!,
+            config.assignmentCollectionId!,
+            assignment.$id
+          )
+        );
+        await Promise.all(deletePromises);
+      }
+  
       // Get all unposted assignments
       const unpostedAssignments = await databases.listDocuments(
         config.databaseId!,
@@ -246,97 +278,49 @@ const Assign = () => {
         return;
       }
   
-      // Group assignments by jobsite and date
-      const assignmentsByJobsiteAndDate = unpostedAssignments.documents.reduce((acc: any, assignment) => {
-        const key = `${assignment.job_site_id}_${assignment.date}`;
-        if (!acc[key]) {
-          acc[key] = [];
-        }
-        acc[key].push(assignment);
-        return acc;
-      }, {});
-  
-      // Handle duplicates
-      for (const key in assignmentsByJobsiteAndDate) {
-        const assignments = assignmentsByJobsiteAndDate[key];
-        if (assignments.length > 1) {
-          assignments.sort((a: any, b: any) => 
-            new Date(b.$createdAt).getTime() - new Date(a.$createdAt).getTime()
-          );
-  
-          const shouldOverride = await new Promise((resolve) => {
-            Alert.alert(
-              'Duplicate Assignment Date',
-              `There are multiple assignments for ${assignments[0].job_site_id} on ${new Date(assignments[0].date).toLocaleDateString()}. Keep newest assignment?`,
-              [
-                { text: 'No', onPress: () => resolve(false), style: 'cancel' },
-                { text: 'Yes', onPress: () => resolve(true) }
-              ]
-            );
-          });
-  
-          assignmentsByJobsiteAndDate[key] = shouldOverride ? 
-            [assignments[0]] : [assignments[assignments.length - 1]];
-        }
-      }
-  
-      const assignmentsToPost = Object.values(assignmentsByJobsiteAndDate).flat();
-  
-      // Update assignments
-      const updateAssignmentPromises = assignmentsToPost.map((assignment: any) =>
-        databases.updateDocument(
+      // Update assignments with new date and posted status
+      const updateAssignmentPromises = unpostedAssignments.documents.map(assignment =>
+        databases.createDocument(
           config.databaseId!,
           config.assignmentCollectionId!,
-          assignment.$id,
-          { 
-            posted: true,
-            date: selectedDate.toISOString()
+          ID.unique(),
+          {
+            contractor_id: assignment.contractor_id,
+            job_site_id: assignment.job_site_id,
+            message: assignment.message || null,
+            date: selectedDate.toISOString().split('T')[0],
+            posted: true
           }
         )
       );
   
-      // Update jobsites
-      const jobsiteIds = [...new Set(assignmentsToPost.map((a: any) => a.job_site_id))];
-      const updateJobsitePromises = jobsiteIds.map(jobsiteId =>
-        databases.updateDocument(
-          config.databaseId!,
-          config.jobsiteCollectionId!,
-          jobsiteId,
-          { posted: true }
-        )
-      );
+      await Promise.all(updateAssignmentPromises);
   
-      await Promise.all([...updateAssignmentPromises, ...updateJobsitePromises]);
-      
-      // Send notifications to all assigned contractors
+      // Send notifications to affected contractors
       const assignedContractors = unpostedAssignments.documents.map(a => a.contractor_id);
-      
-      // Get contractor details including push tokens
       const contractorsResponse = await databases.listDocuments(
         config.databaseId!,
         config.contractorCollectionId!,
         [Query.equal('$id', assignedContractors)]
       );
-    
-      // Send notifications with error handling
+  
+      // Send notifications with override message
       for (const contractor of contractorsResponse.documents) {
         if (contractor.pushToken) {
           try {
             await sendPushNotification(
               contractor.pushToken,
-              'New Assignment',
-              'You have been assigned to a new jobsite. Check your assignments for details.'
+              'Assignment Updated',
+              'Your assignment has been updated. Please check your assignments for the latest details.'
             );
           } catch (notificationError) {
             console.error('Error sending notification to contractor:', contractor.$id, notificationError);
-            // Continue with other contractors even if one fails
           }
         }
       }
-      
-      // Reset selections and refresh
+  
       fetchJobsites();
-      Alert.alert('Success', 'All assignments posted successfully.');
+      Alert.alert('Success', 'Assignments posted successfully with overrides.');
     } catch (error) {
       console.error('Error posting assignments:', error);
       Alert.alert('Error', 'Failed to post assignments.');
@@ -370,15 +354,9 @@ const Assign = () => {
             ? contractorsMap[item.$id].join(', ')
             : "None"}
         </Text>
-        {item.posted && (
-          <Text style={styles.postedStatus}>Posted ✓</Text>
-        )}
       </View>
       <View style={styles.buttonContainer}>
-        <Button 
-          title={item.posted ? "Modify" : "Edit"} 
-          onPress={() => handleEditJobsite(item.$id)} 
-        />
+        <Button title="Edit" onPress={() => handleEditJobsite(item.$id)} />
       </View>
     </View>
   );
