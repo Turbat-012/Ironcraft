@@ -5,7 +5,6 @@ import { useGlobalContext } from '@/lib/global-provider';
 import { logout } from '@/lib/appwrite';
 import { databases } from '@/lib/appwrite';
 import { config } from '@/constants/config';
-import { sendPushNotification } from '@/lib/notifications';
 
 interface SettingsItemProps {
     icon: ImageSourcePropType;
@@ -272,27 +271,6 @@ const Profile = () => {
         }
     };
 
-    const testNotification = async () => {
-        console.log('Testing notification with token:', user?.contractorData?.pushToken); // Debug log
-                
-        if (user?.contractorData?.pushToken) {
-            try {
-                await sendPushNotification(
-                    user.contractorData.pushToken,
-                    'Test Notification',
-                    'This is a test notification'
-                );
-                console.log('Notification sent successfully');
-                Alert.alert('Success', 'Test notification sent');
-            } catch (error) {
-                console.error('Notification error:', error);
-                Alert.alert('Error', 'Failed to send test notification');
-            }
-        } else {
-            Alert.alert('Error', 'No push token available');
-        }
-    };
-
     // Add new state for payment modal
     const [isPaymentModalVisible, setIsPaymentModalVisible] = useState(false);
     const [paymentFormValues, setPaymentFormValues] = useState({
@@ -385,12 +363,6 @@ const Profile = () => {
                         title="Logout" 
                         textStyle="text-red-500"  // Changed from text-danger to text-red-500
                         onPress={handleLogout} 
-                    />
-
-                    <SettingsItem 
-                        icon={icons.bell}
-                        title="Test Notification"
-                        onPress={testNotification}
                     />
                 </View>
 

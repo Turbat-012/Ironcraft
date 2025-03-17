@@ -131,6 +131,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     height: 44,
   },
+  postedStatus: {
+    color: '#4CAF50',
+    fontSize: 14,
+    marginTop: 4,
+    fontStyle: 'italic'
+  }
 });
 
 const Assign = () => {
@@ -364,9 +370,15 @@ const Assign = () => {
             ? contractorsMap[item.$id].join(', ')
             : "None"}
         </Text>
+        {item.posted && (
+          <Text style={styles.postedStatus}>Posted ✓</Text>
+        )}
       </View>
       <View style={styles.buttonContainer}>
-        <Button title="Edit" onPress={() => handleEditJobsite(item.$id)} />
+        <Button 
+          title={item.posted ? "Modify" : "Edit"} 
+          onPress={() => handleEditJobsite(item.$id)} 
+        />
       </View>
     </View>
   );

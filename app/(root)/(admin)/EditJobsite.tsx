@@ -27,6 +27,7 @@ const EditJobsite = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [isPosted, setIsPosted] = useState(false);
 
   useEffect(() => {
     if (jobsiteId) {
@@ -49,6 +50,7 @@ const EditJobsite = () => {
         jobsiteId as string
       );
       setJobsite(jobsiteData);
+      setIsPosted(jobsiteData.posted || false);
 
       // Load all contractors
       const contractorsResponse = await databases.listDocuments(
@@ -99,114 +101,30 @@ const EditJobsite = () => {
   };
 
   const handleSave = async () => {
-    setLoading(true);
-    try {
-      const today = new Date().toISOString().split('T')[0];
-
-      // Get ALL current assignments for this jobsite
-      const currentAssignments = await databases.listDocuments(
-        config.databaseId!,
-        config.assignmentCollectionId!,
-        [
-          Query.equal('job_site_id', jobsiteId),
-          Query.equal('date', today),
-          Query.equal('posted', false)
-        ]
-      );
-
-      // Get assignments for selected contractors on other jobsites
-      const otherAssignments = await databases.listDocuments(
-        config.databaseId!,
-        config.assignmentCollectionId!,
-        [
-          Query.notEqual('job_site_id', jobsiteId),
-          Query.equal('date', today)
-        ]
-      );
-
-      // Fetch jobsite details for other assignments
-      const jobsiteDetails = await Promise.all(
-        otherAssignments.documents.map(async (assignment) => {
-          const jobsite = await databases.getDocument(
-            config.databaseId!,
-            config.jobsiteCollectionId!,
-            assignment.job_site_id
-          );
-          return {
-            ...assignment,
-            jobsiteName: jobsite.name
-          };
-        })
-      );
-
-      // Group assignments by contractor
-      const existingByContractor = jobsiteDetails.reduce((acc, assignment) => {
-        if (selectedContractors.includes(assignment.contractor_id)) {
-          acc[assignment.contractor_id] = {
-            assignmentId: assignment.$id,
-            jobsiteName: assignment.jobsiteName,
-            posted: assignment.posted
-          };
-        }
-        return acc;
-      }, {});
-
-      // Check for posted assignments that would be overridden
-      const postedOverrides = selectedContractors
-        .filter(contractorId => 
-          existingByContractor[contractorId] && 
-          existingByContractor[contractorId].posted
-        )
-        .map(contractorId => ({
-          contractorId,
-          jobsite: existingByContractor[contractorId].jobsiteName
-        }));
-
-      // If there are posted assignments to override, ask for confirmation
-      if (postedOverrides.length > 0) {
-        return new Promise((resolve) => {
-          Alert.alert(
-            'Warning',
-            `Some contractors already have posted assignments for today:\n\n${
-              postedOverrides.map(o => `• ${o.jobsite}`).join('\n')
-            }\n\nDo you want to override these assignments?`,
-            [
-              {
-                text: 'Cancel',
-                style: 'cancel',
-                onPress: () => {
-                  setLoading(false);
-                  resolve(false);
-                }
-              },
-              {
-                text: 'Override',
-                style: 'destructive',
-                onPress: async () => {
-                  try {
-                    await processAssignments(currentAssignments.documents, existingByContractor);
-                    resolve(true);
-                  } catch (error) {
-                    console.error('Error processing assignments:', error);
-                    Alert.alert('Error', 'Failed to update assignments');
-                    resolve(false);
-                  }
-                  setLoading(false);
-                }
+    if (isPosted) {
+      return new Promise((resolve) => {
+        Alert.alert(
+          'Warning',
+          'This jobsite has already been posted. Are you sure you want to modify the assignments?',
+          [
+            {
+              text: 'Cancel',
+              style: 'cancel',
+              onPress: () => resolve(false)
+            },
+            {
+              text: 'Modify',
+              style: 'destructive',
+              onPress: async () => {
+                await processAssignments(currentAssignments.documents, existingByContractor);
+                resolve(true);
               }
-            ]
-          );
-        });
-      }
-
-      // If no posted assignments to override, proceed normally
+            }
+          ]
+        );
+      });
+    } else {
       await processAssignments(currentAssignments.documents, existingByContractor);
-
-    } catch (error) {
-      console.error('Error saving assignments:', error);
-      Alert.alert('Error', 'Failed to update assignments');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -271,6 +189,13 @@ const EditJobsite = () => {
 
   return (
     <SafeAreaView style={styles.container}>
+      {isPosted && (
+        <View style={styles.postedBanner}>
+          <Text style={styles.postedText}>
+            ⚠️ Editing Posted Assignment
+          </Text>
+        </View>
+      )}
       <View style={styles.contentContainer}>
         <Text style={styles.title}>
           Assign Contractors to {jobsite?.name || 'Loading...'}
@@ -416,6 +341,17 @@ const styles = StyleSheet.create({
   buttonContainer: {
     paddingHorizontal: 8,
     marginBottom: 8,
+  },
+  postedBanner: {
+    backgroundColor: '#FFA500',
+    padding: 8,
+    marginBottom: 16,
+    borderRadius: 4,
+  },
+  postedText: {
+    color: 'white',
+    textAlign: 'center',
+    fontWeight: 'bold',
   }
 });
 
