@@ -9,4 +9,5 @@ export const config = {
     assignmentCollectionId: process.env.EXPO_PUBLIC_APPWRITE_ASSIGNMENT_COLLECTION_ID,
     payCollectionId: process.env.EXPO_PUBLIC_APPWRITE_PAY_COLLECTION_ID,
     accessToken: process.env.EXPO_ACCESS_TOKEN,
+    companiesCollectionId: process.env.EXPO_PUBLIC_APPWRITE_COMPANIES_COLLECTION_ID,
   };
