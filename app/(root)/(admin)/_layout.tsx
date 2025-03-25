@@ -85,7 +85,7 @@ const TabsLayout = () => {
                 )
             }}
         />      
-        
+
         <Tabs.Screen
             name="companies"
             options={{
@@ -93,7 +93,7 @@ const TabsLayout = () => {
                 headerShown: false,
                 tabBarIcon: ({ focused}) => (
                     <View>
-                        <TabIcon icon={icons.people} 
+                        <TabIcon icon={icons.companies} 
                         focused={focused} title="Companies" />
                     </View>
                 )

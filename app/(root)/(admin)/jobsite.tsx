@@ -1,4 +1,15 @@
-import { View, Text, TextInput, Button, Alert, FlatList, StyleSheet } from 'react-native';
+import { 
+  View, 
+  Text, 
+  TextInput, 
+  Button, 
+  Alert, 
+  FlatList, 
+  StyleSheet,
+  Modal,
+  TouchableOpacity,
+  ScrollView,
+} from 'react-native';
 import React, { useState, useEffect } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useGlobalContext } from '@/lib/global-provider';
@@ -7,25 +18,19 @@ import { ID } from 'react-native-appwrite';
 import CustomButton from '@/components/CustomButton';
 import {config} from '@/constants/config';
 
-// export const config = {
-//   platform: "com.jsm.ironcraft",
-//   endpoint: process.env.EXPO_PUBLIC_APPWRITE_ENDPOINT,
-//   projectId: process.env.EXPO_PUBLIC_APPWRITE_PROJECT_ID,
-//   databaseId: process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID,
-//   contractorCollectionId: process.env.EXPO_PUBLIC_APPWRITE_CONTRACTORS_COLLECTION_ID,
-//   hoursCollectionId: process.env.EXPO_PUBLIC_APPWRITE_HOURS_COLLECTION_ID,
-//   jobsiteCollectionId: process.env.EXPO_PUBLIC_APPWRITE_JOB_SITES_COLLECTION_ID,
-// }
-
 const Jobsite = () => {
   const { user } = useGlobalContext();
   const [jobsiteName, setJobsiteName] = useState('');
   const [jobsiteAddress, setJobsiteAddress] = useState('');
   const [jobsites, setJobsites] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [companies, setCompanies] = useState([]);
+  const [selectedCompanyId, setSelectedCompanyId] = useState('');
+  const [showCompanyPicker, setShowCompanyPicker] = useState(false);
 
   useEffect(() => {
     fetchJobsites();
+    fetchCompanies();
   }, []);
 
   const fetchJobsites = async () => {
@@ -43,9 +48,25 @@ const Jobsite = () => {
     }
   };
 
+  const fetchCompanies = async () => {
+    try {
+      const response = await databases.listDocuments(
+        config.databaseId!,
+        config.companiesCollectionId!
+      );
+      setCompanies(response.documents);
+      if (response.documents.length > 0) {
+        setSelectedCompanyId(response.documents[0].$id);
+      }
+    } catch (error) {
+      console.error('Error fetching companies:', error);
+      Alert.alert('Error', 'Failed to fetch companies.');
+    }
+  };
+
   const handleCreateJobsite = async () => {
-    if (!jobsiteName.trim() || !jobsiteAddress.trim()) {
-      Alert.alert('Validation Error', 'Jobsite name and address cannot be empty.');
+    if (!jobsiteName.trim() || !jobsiteAddress.trim() || !selectedCompanyId) {
+      Alert.alert('Validation Error', 'Jobsite name, address, and company are required.');
       return;
     }
 
@@ -54,9 +75,11 @@ const Jobsite = () => {
         config.databaseId!,
         config.jobsiteCollectionId!,
         ID.unique(),
-        { name: jobsiteName, 
-          address: jobsiteAddress
-         }
+        { 
+          name: jobsiteName, 
+          address: jobsiteAddress,
+          companies_id: selectedCompanyId
+        }
       );
       setJobsites([...jobsites, response]);
       setJobsiteName('');
@@ -100,9 +123,74 @@ const Jobsite = () => {
     );
   };
 
+  const handleCompanySelect = (companyId: string) => {
+    setSelectedCompanyId(companyId);
+    setShowCompanyPicker(false);
+  };
+
+  const renderCompanySelector = () => {
+    const selectedCompany = companies.find(c => c.$id === selectedCompanyId);
+    
+    return (
+      <View>
+        <TouchableOpacity 
+          style={styles.selectorButton}
+          onPress={() => setShowCompanyPicker(true)}
+        >
+          <Text style={styles.selectorButtonText}>
+            {selectedCompany ? selectedCompany.name : 'Select a company...'}
+          </Text>
+        </TouchableOpacity>
+
+        <Modal
+          visible={showCompanyPicker}
+          transparent={true}
+          animationType="slide"
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Select Company</Text>
+                <TouchableOpacity 
+                  onPress={() => setShowCompanyPicker(false)}
+                  style={styles.closeButton}
+                >
+                  <Text style={styles.closeButtonText}>✕</Text>
+                </TouchableOpacity>
+              </View>
+              
+              <ScrollView style={styles.companiesList}>
+                {companies.map((company) => (
+                  <TouchableOpacity
+                    key={company.$id}
+                    style={[
+                      styles.companyOption,
+                      company.$id === selectedCompanyId && styles.selectedCompanyOption
+                    ]}
+                    onPress={() => handleCompanySelect(company.$id)}
+                  >
+                    <Text style={[
+                      styles.companyOptionText,
+                      company.$id === selectedCompanyId && styles.selectedCompanyOptionText
+                    ]}>
+                      {company.name}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+      </View>
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <Text style={styles.title}>Manage Jobsites</Text>
+      
+      {renderCompanySelector()}
+
       <TextInput
         style={styles.input}
         value={jobsiteName}
@@ -121,7 +209,7 @@ const Jobsite = () => {
         title="Create Jobsite"
         handlePress={handleCreateJobsite}
         containerStyles="mt-7 mb-5 bg-blue-500"
-        isLoading={undefined} 
+        isLoading={loading} 
         textStyles={undefined}
       />
       {loading ? (
@@ -135,6 +223,9 @@ const Jobsite = () => {
               <View>
                 <Text style={styles.jobsiteName}>{item.name}</Text>
                 <Text style={styles.jobsiteAddress}>{item.address}</Text>
+                <Text style={styles.companyName}>
+                  {companies.find(c => c.$id === item.companies_id)?.name || 'Unknown Company'}
+                </Text>
               </View>
               <Button title="Delete" onPress={() => handleDeleteJobsite(item.$id)} />
             </View>
@@ -189,6 +280,80 @@ const styles = StyleSheet.create({
   jobsiteAddress: {
     color: 'white',
     fontSize: 14,
+  },
+  pickerContainer: {
+    backgroundColor: '#333',
+    borderRadius: 5,
+    marginBottom: 10,
+    overflow: 'hidden',
+  },
+  picker: {
+    color: 'white',
+    backgroundColor: 'transparent',
+  },
+  companyName: {
+    color: '#aaa',
+    fontSize: 12,
+    marginTop: 4,
+  },
+  selectorButton: {
+    backgroundColor: '#333',
+    padding: 15,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  selectorButtonText: {
+    color: 'white',
+    fontSize: 16,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#1c1c1e',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '70%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
+  },
+  modalTitle: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  closeButton: {
+    padding: 8,
+  },
+  closeButtonText: {
+    color: '#007AFF',
+    fontSize: 20,
+  },
+  companiesList: {
+    padding: 16,
+  },
+  companyOption: {
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  selectedCompanyOption: {
+    backgroundColor: '#0A84FF',
+  },
+  companyOptionText: {
+    color: 'white',
+    fontSize: 16,
+  },
+  selectedCompanyOptionText: {
+    fontWeight: 'bold',
   },
 });
 

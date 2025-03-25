@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { databases } from '@/lib/appwrite';
-import { ID } from 'appwrite';
+import { ID } from 'react-native-appwrite';
 import { config } from '@/constants/config';
 import CustomButton from '@/components/CustomButton';
 
@@ -46,22 +46,30 @@ const Companies = () => {
   };
 
   const handleAddCompany = async () => {
-    if (!newCompany.name.trim() || !newCompany.abn.trim()) {
-      Alert.alert('Error', 'Company name and ABN are required');
+    // Validate required fields and ABN length
+    if (!newCompany.name.trim()) {
+      Alert.alert('Error', 'Company name is required');
+      return;
+    }
+    
+    if (!newCompany.abn.trim() || newCompany.abn.trim().length !== 11) {
+      Alert.alert('Error', 'ABN must be exactly 11 digits');
       return;
     }
 
     setLoading(true);
     try {
+      const newCompanyId = ID.unique();
       await databases.createDocument(
         config.databaseId!,
         config.companiesCollectionId!,
-        ID.unique(),
+        newCompanyId,
         {
           name: newCompany.name.trim(),
           abn: newCompany.abn.trim(),
           bank_anumber: newCompany.bank_anumber.trim(),
-          bank_bsb: newCompany.bank_bsb.trim()
+          bank_bsb: newCompany.bank_bsb.trim(),
+          companies_id: newCompanyId // Add this line to match schema requirement
         }
       );
 
@@ -113,11 +121,22 @@ const Companies = () => {
             onChangeText={(text) => setNewCompany(prev => ({ ...prev, name: text }))}
           />
           <TextInput
-            style={styles.input}
+            style={[
+              styles.input,
+              newCompany.abn.length > 0 && newCompany.abn.length !== 11 && styles.inputError
+            ]}
             placeholder="ABN"
             placeholderTextColor="#666"
             value={newCompany.abn}
-            onChangeText={(text) => setNewCompany(prev => ({ ...prev, abn: text }))}
+            onChangeText={(text) => {
+              // Only allow digits
+              const numbersOnly = text.replace(/[^0-9]/g, '');
+              // Limit to 11 characters
+              const limited = numbersOnly.slice(0, 11);
+              setNewCompany(prev => ({ ...prev, abn: limited }));
+            }}
+            keyboardType="numeric"
+            maxLength={11}
           />
           <TextInput
             style={styles.input}
