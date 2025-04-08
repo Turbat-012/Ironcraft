@@ -9,6 +9,8 @@ import {
   Modal,
   TouchableOpacity,
   ScrollView,
+  Keyboard,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import React, { useState, useEffect } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -84,6 +86,7 @@ const Jobsite = () => {
       setJobsites([...jobsites, response]);
       setJobsiteName('');
       setJobsiteAddress('');
+      Keyboard.dismiss(); // Dismiss the keyboard
       Alert.alert('Success', 'Jobsite created successfully.');
     } catch (error) {
       console.error('Error creating jobsite:', error);
@@ -186,54 +189,56 @@ const Jobsite = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>Manage Jobsites</Text>
-      
-      {renderCompanySelector()}
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <SafeAreaView style={styles.container}>
+        <Text style={styles.title}>Manage Jobsites</Text>
+        
+        {renderCompanySelector()}
 
-      <TextInput
-        style={styles.input}
-        value={jobsiteName}
-        onChangeText={setJobsiteName}
-        placeholder="Enter jobsite name"
-        placeholderTextColor="#ffffff"
-      />
-      <TextInput
-        style={styles.input}
-        value={jobsiteAddress}
-        onChangeText={setJobsiteAddress}
-        placeholder="Enter jobsite address"
-        placeholderTextColor="#ffffff"
-      />
-      <CustomButton 
-        title="Create Jobsite"
-        handlePress={handleCreateJobsite}
-        containerStyles="mt-7 mb-5 bg-blue-500"
-        isLoading={loading} 
-        textStyles={undefined}
-      />
-      {loading ? (
-        <Text style={styles.loadingText}>Loading...</Text>
-      ) : (
-        <FlatList
-          data={jobsites}
-          keyExtractor={(item) => item.$id}
-          renderItem={({ item }) => (
-            <View style={styles.jobsiteItem}>
-              <View>
-                <Text style={styles.jobsiteName}>{item.name}</Text>
-                <Text style={styles.jobsiteAddress}>{item.address}</Text>
-                <Text style={styles.companyName}>
-                  {companies.find(c => c.$id === item.companies_id)?.name || 'Unknown Company'}
-                </Text>
-              </View>
-              <Button title="Delete" onPress={() => handleDeleteJobsite(item.$id)} />
-            </View>
-          )}
-          contentContainerStyle={styles.listContainer}
+        <TextInput
+          style={styles.input}
+          value={jobsiteName}
+          onChangeText={setJobsiteName}
+          placeholder="Enter jobsite name"
+          placeholderTextColor="#ffffff"
         />
-      )}
-    </SafeAreaView>
+        <TextInput
+          style={styles.input}
+          value={jobsiteAddress}
+          onChangeText={setJobsiteAddress}
+          placeholder="Enter jobsite address"
+          placeholderTextColor="#ffffff"
+        />
+        <CustomButton 
+          title="Create Jobsite"
+          handlePress={handleCreateJobsite}
+          containerStyles="mt-7 mb-5 bg-blue-500"
+          isLoading={loading} 
+          textStyles={undefined}
+        />
+        {loading ? (
+          <Text style={styles.loadingText}>Loading...</Text>
+        ) : (
+          <FlatList
+            data={jobsites}
+            keyExtractor={(item) => item.$id}
+            renderItem={({ item }) => (
+              <View style={styles.jobsiteItem}>
+                <View>
+                  <Text style={styles.jobsiteName}>{item.name}</Text>
+                  <Text style={styles.jobsiteAddress}>{item.address}</Text>
+                  <Text style={styles.companyName}>
+                    {companies.find(c => c.$id === item.companies_id)?.name || 'Unknown Company'}
+                  </Text>
+                </View>
+                <Button title="Delete" onPress={() => handleDeleteJobsite(item.$id)} />
+              </View>
+            )}
+            contentContainerStyle={styles.listContainer}
+          />
+        )}
+      </SafeAreaView>
+    </TouchableWithoutFeedback>
   );
 };
 
