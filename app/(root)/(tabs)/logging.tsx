@@ -9,6 +9,8 @@ import { logHours, databases } from '@/lib/appwrite';
 import { ID, Query } from 'react-native-appwrite';
 import { config } from '@/constants/config';
 import { Picker } from '@react-native-picker/picker';
+import { scaledSize } from '@/lib/textScaling';
+import { globalStyles } from '@/styles/globalStyles';
 
 const Logging = () => {
   const { user } = useGlobalContext();
@@ -202,7 +204,7 @@ const Logging = () => {
     if (assignedJobsite) {
       return (
         <View style={styles.jobsiteContainer}>
-          <Text style={styles.label}>Assigned Jobsite:</Text>
+          <Text style={globalStyles.label}>Assigned Jobsite:</Text>
           <Text style={styles.jobsiteText}>{assignedJobsite.name}</Text>
         </View>
       );
@@ -210,9 +212,9 @@ const Logging = () => {
   
     return (
       <View style={styles.jobsiteContainer}>
-        <Text style={styles.label}>Select Jobsite:</Text>
+        <Text style={globalStyles.label}>Select Jobsite:</Text>
         <TextInput
-          style={styles.searchInput}
+          style={globalStyles.searchInput}
           value={searchTerm}
           onChangeText={setSearchTerm}
           placeholder="Search jobsites..."
@@ -223,7 +225,7 @@ const Logging = () => {
             <TouchableOpacity
               key={jobsite.id}
               style={[
-                styles.jobsiteItem,
+                globalStyles.jobsiteItem,
                 manualJobsiteId === jobsite.id && styles.selectedJobsiteItem,
               ]}
               onPress={() => setManualJobsiteId(jobsite.id)}
@@ -243,11 +245,11 @@ const Logging = () => {
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={globalStyles.container}>
         <View className='w-full justify-center min-h-[60vh] px-4 my-6'>
-          <Text style={styles.title}>Log Working Hours</Text>
+          <Text style={globalStyles.title}>Log Working Hours</Text>
           <TextInput
-            style={styles.input}
+            style={globalStyles.input}
             value={hourlyRate}
             onChangeText={handleRateChange}
             placeholder="Enter hourly rate"
@@ -255,7 +257,7 @@ const Logging = () => {
             keyboardType="numeric"
           />
           <TextInput
-            style={styles.input}
+            style={globalStyles.input}
             value={hours}
             onChangeText={handleHoursChange}
             placeholder="Enter hours worked"
@@ -263,14 +265,14 @@ const Logging = () => {
             keyboardType="numeric"
           />
           <TextInput
-            style={styles.input}
+            style={globalStyles.input}
             value={minutes}
             onChangeText={handleMinutesChange}
             placeholder="Enter minutes worked"
             placeholderTextColor="#ffffff"
             keyboardType="numeric"
           />
-          <View style={styles.datePickerContainer}>
+          <View style={globalStyles.datePickerContainer}>
             <Button title="Choose Date" onPress={() => setShowDatePicker(true)} />
             <Text style={styles.dateText}>{date.toDateString()}</Text>
           </View>
@@ -293,34 +295,10 @@ const Logging = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 16,
-    backgroundColor: '#000000',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 16,
-    color: 'white',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    padding: 10,
-    borderRadius: 5,
-    marginBottom: 16,
-    color: 'white',
-  },
-  datePickerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-    color: ''
-  },
   dateText: {
     marginLeft: 10,
-    fontSize: 16,
+    fontSize: scaledSize(16),
+    color: 'white',
   },
   jobsiteContainer: {
     marginVertical: 16,
@@ -328,44 +306,28 @@ const styles = StyleSheet.create({
     backgroundColor: '#1e1e1e',
     borderRadius: 8,
   },
-  label: {
-    color: '#ffffff',
-    fontSize: 16,
-    marginBottom: 8,
-  },
   jobsiteText: {
     color: '#4CAF50',
-    fontSize: 18,
+    fontSize: scaledSize(18),
     fontWeight: 'bold',
-  },
-  searchInput: {
-    backgroundColor: '#333333',
-    color: 'white',
-    borderRadius: 5,
-    padding: 12,
-    fontSize: 16,
-    marginBottom: 12,
-  },
-  jobsiteList: {
-    maxHeight: 200,
-  },
-  jobsiteItem: {
-    padding: 12,
-    backgroundColor: '#333333',
-    marginBottom: 8,
-    borderRadius: 5,
-  },
-  selectedJobsiteItem: {
-    backgroundColor: '#0061FF',
   },
   jobsiteItemText: {
     color: 'white',
-    fontSize: 16,
+    fontSize: scaledSize(16),
+  },
+  jobsiteList: {
+    maxHeight: 200,
+    marginTop: 12,
+  },
+  selectedJobsiteItem: {
+    backgroundColor: '#0061ff', // Matches the blue theme used in buttons
+    borderColor: '#0061ff',
+    borderWidth: 1,
   },
   selectedJobsiteItemText: {
     color: 'white',
-    fontWeight: 'bold',
-  },
+    fontWeight: '600',
+  },  
 });
 
 export default Logging;

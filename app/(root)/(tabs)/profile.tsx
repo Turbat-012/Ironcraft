@@ -5,6 +5,8 @@ import { useGlobalContext } from '@/lib/global-provider';
 import { logout } from '@/lib/appwrite';
 import { databases } from '@/lib/appwrite';
 import { config } from '@/constants/config';
+import { scaledSize } from '@/lib/textScaling';
+import { globalStyles } from '@/styles/globalStyles';
 
 interface SettingsItemProps {
     icon: ImageSourcePropType;
@@ -12,6 +14,28 @@ interface SettingsItemProps {
     onPress?: () => void;
     textStyle?: string;
     showArrow?: boolean;
+}
+
+interface ContractorData {
+    name: string;
+    email: string;
+    abn: string;
+    bsb: string;
+    accountNumber: string;
+}
+  
+interface User {
+    $id: string;
+    name: string;
+    avatar: string;
+    contractorData: ContractorData;
+}
+  
+interface FormValues {
+    name: string;
+    abn: string;
+    bsb: string;
+    accountNumber: string;
 }
 
 const SettingsItem = ({icon, title, onPress, showArrow=false, textStyle}: SettingsItemProps) => (
@@ -54,10 +78,18 @@ const ViewProfileModal = React.memo(({
                     value={formValues.name}
                     onChangeText={(text) => setFormValues(prev => ({ ...prev, name: text }))}
                     className="bg-[#2d2d2d] text-white p-3 rounded-lg mb-4"
+                    style={{ fontSize: scaledSize(16) }}
                     placeholderTextColor="#666"
+                    allowFontScaling={false}
                 />
 
-                <Text className="text-white mb-2">ABN:</Text>
+                <Text 
+                    className="text-white mb-2"
+                    style={{ fontSize: scaledSize(14) }}
+                    allowFontScaling={false}
+                >
+                    ABN:
+                </Text>
                 <TextInput
                     value={formValues.abn}
                     onChangeText={(text) => {
@@ -334,12 +366,22 @@ const Profile = () => {
                 <View className="flex-row justify-center flex mt-5">
                     <View className="flex flex-col items-center relative mt-5">
                         <Image source={{uri: user?.avatar}} className="size-44 relative rounded-full"/>
-                            <Text className="text-2xl font-rubik-bold color-white mt-2">{user?.name}</Text>
+                        <Text 
+                            className="text-2xl font-rubik-bold color-white mt-2"
+                            style={{ fontSize: scaledSize(24) }}
+                            allowFontScaling={false}
+                        >
+                            {user?.name}
+                        </Text>
                     </View>
                 </View>
 
                 <View className="flex flex-col mt-5 border-t pt-5 border-primary-200">
-                    <Text className="text-lg color-white font-rubik-medium mb-4">
+                    <Text 
+                        className="text-lg color-white font-rubik-medium mb-4"
+                        style={{ fontSize: scaledSize(16) }}
+                        allowFontScaling={false}
+                    >
                         ABN: {user?.contractorData?.abn || 'Not set'}
                     </Text>
                     <SettingsItem 

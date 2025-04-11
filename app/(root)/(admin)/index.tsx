@@ -10,38 +10,9 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { Platform } from 'react-native';
 import {config} from '@/constants/config';
 import { sendPushNotification } from '@/lib/notifications';
+import { globalStyles } from '@/styles/globalStyles';
 
-// export const config = {
-//   platform: "com.jsm.ironcraft",
-//   endpoint: process.env.EXPO_PUBLIC_APPWRITE_ENDPOINT,
-//   projectId: process.env.EXPO_PUBLIC_APPWRITE_PROJECT_ID,
-//   databaseId: process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID,
-//   contractorCollectionId: process.env.EXPO_PUBLIC_APPWRITE_CONTRACTORS_COLLECTION_ID,
-//   hoursCollectionId: process.env.EXPO_PUBLIC_APPWRITE_HOURS_COLLECTION_ID,
-//   jobsiteCollectionId: process.env.EXPO_PUBLIC_APPWRITE_JOB_SITES_COLLECTION_ID,
-//   assignmentCollectionId: process.env.EXPO_PUBLIC_APPWRITE_ASSIGNMENT_COLLECTION_ID,
-// };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: 'black',
-    padding: 16,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: 'white',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  loadingText: {
-    color: 'white',
-    textAlign: 'center',
-  },
-  listContainer: {
-    paddingBottom: 20,
-  },
+const styles = StyleSheet.create({  
   jobsiteItem: {
     backgroundColor: '#444',
     padding: 16,
@@ -74,62 +45,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 8,
   },
-  dateSection: {
-    backgroundColor: '#1e1e1e',
-    padding: 16,
-    marginBottom: 20,
-    borderRadius: 8,
-  },
-  dateLabel: {
-    color: '#ffffff',
-    fontSize: 16,
-    marginBottom: 8,
-  },
-  dateValue: {
-    color: '#0061ff',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  datePicker: {
-    marginTop: 10,
-    backgroundColor: '#333',
-  },
-  contractorSelection: {
-    marginTop: 10,
-  },
-  label: {
-    color: 'white',
-    fontSize: 14,
-    marginBottom: 4,
-  },
-  contractorList: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  contractorItem: {
-    backgroundColor: '#333',
-    padding: 8,
-    borderRadius: 4,
-    marginRight: 8,
-    marginBottom: 8,
-  },
-  selectedContractorItem: {
-    backgroundColor: '#0061ff',
-  },
-  contractorName: {
-    color: 'white',
-  },
   searchContainer: {
     marginBottom: 16,
     paddingHorizontal: 8,
-  },
-  searchInput: {
-    backgroundColor: '#333333',
-    color: 'white',
-    borderRadius: 5,
-    padding: 12,
-    fontSize: 16,
-    height: 44,
   },
 });
 
@@ -362,12 +280,12 @@ const Assign = () => {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>Jobsite Assignments</Text>
+    <SafeAreaView style={globalStyles.container}>
+      <Text style={globalStyles.title}>Jobsite Assignments</Text>
       
       <View style={styles.searchContainer}>
         <TextInput
-          style={styles.searchInput}
+          style={globalStyles.searchInput}
           value={searchTerm}
           onChangeText={setSearchTerm}
           placeholder="Search jobsites..."
@@ -375,10 +293,10 @@ const Assign = () => {
         />
       </View>
       
-      <View style={styles.dateSection}>
-        <Text style={styles.dateLabel}>Select Date:</Text>
+      <View style={globalStyles.dateSection}>
+        <Text style={globalStyles.dateLabel}>Select Date:</Text>
         <Text 
-          style={styles.dateValue}
+          style={globalStyles.dateValue}
           onPress={() => setExpandedDate(!expandedDate)}
         >
           {selectedDate.toLocaleDateString()}
@@ -391,7 +309,7 @@ const Assign = () => {
             onChange={handleDateChange}
             minimumDate={new Date()}
             style={[
-              styles.datePicker,
+              globalStyles.datePicker,
               { height: 300 }
             ]}
           />
@@ -406,13 +324,13 @@ const Assign = () => {
         textStyles={undefined}
       />
       {loading ? (
-        <Text style={styles.loadingText}>Loading...</Text>
+        <Text style={globalStyles.loadingText}>Loading...</Text>
       ) : (
         <FlatList     
           data={filteredJobsites}
           keyExtractor={(item) => item.$id}
           renderItem={renderItem}
-          contentContainerStyle={styles.listContainer}
+          contentContainerStyle={globalStyles.listContainer}
         />
       )}
     </SafeAreaView>

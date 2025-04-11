@@ -19,6 +19,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Query, ID } from 'react-native-appwrite';
 import CustomButton from '@/components/CustomButton';
 import {config} from '@/constants/config';
+import { globalStyles } from '@/styles/globalStyles';
 
 const EditJobsite = () => {
   const router = useRouter();
@@ -176,14 +177,14 @@ const EditJobsite = () => {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={globalStyles.container}>
       <KeyboardAvoidingView 
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
         style={{ flex: 1 }}
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-          <View style={styles.contentContainer}>
+          <View style={globalStyles.contentContainer}>
             {isPosted && (
               <View style={styles.postedBanner}>
                 <Text style={styles.postedText}>
@@ -192,13 +193,13 @@ const EditJobsite = () => {
               </View>
             )}
             
-            <Text style={styles.title}>
+            <Text style={globalStyles.title}>
               Assign Contractors to {jobsite?.name || 'Loading...'}
             </Text>
             
             <View style={styles.searchContainer}>
               <TextInput
-                style={styles.searchInput}
+                style={globalStyles.searchInput}
                 value={searchTerm}
                 onChangeText={setSearchTerm}
                 placeholder="Search contractors..."
@@ -210,27 +211,27 @@ const EditJobsite = () => {
               style={styles.mainContent}
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={true}
-              contentContainerStyle={styles.scrollContentContainer}
+              contentContainerStyle={globalStyles.scrollContentContainer}
             >
-              <View style={styles.contractorListContent}>
+              <View style={globalStyles.contractorListContent}>
                 {filteredContractors.map((contractor) => (
                   <TouchableOpacity
                     key={contractor.$id}
                     style={[
-                      styles.contractorItem,
-                      selectedContractors.includes(contractor.$id) && styles.selectedContractorItem,
+                      globalStyles.contractorItem,
+                      selectedContractors.includes(contractor.$id) && globalStyles.selectedContractorItem,
                     ]}
                     onPress={() => handleContractorSelection(contractor.$id)}
                   >
-                    <Text style={styles.contractorName}>{contractor.name}</Text>
+                    <Text style={globalStyles.contractorName}>{contractor.name}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
 
-              <View style={styles.messageContainer}>
-                <Text style={styles.messageLabel}>Additional Message (Optional):</Text>
+              <View style={globalStyles.messageContainer}>
+                <Text style={globalStyles.messageLabel}>Additional Message (Optional):</Text>
                 <TextInput
-                  style={styles.messageInput}
+                  style={globalStyles.messageInput}
                   value={message}
                   onChangeText={setMessage}
                   placeholder="Enter message for contractors..."
@@ -260,81 +261,13 @@ const EditJobsite = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: 'black',
-  },
-  contentContainer: {
-    flex: 1,
-    padding: 16,
-    paddingBottom: Platform.OS === 'ios' ? 90 : 80, // Add padding for button
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: 'white',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
   searchContainer: {
     marginBottom: 16,
     paddingHorizontal: 8,
   },
-  searchInput: {
-    backgroundColor: '#333333',
-    color: 'white',
-    borderRadius: 5,
-    padding: 12,
-    fontSize: 16,
-    height: 44,
-  },
   mainContent: {
     flex: 1,
-  },
-  contractorList: {
-    flex: 1,
-  },
-  contractorListContent: {
-    paddingBottom: 16,
-  },
-  contractorItem: {
-    padding: 16,
-    backgroundColor: '#333333',
-    marginBottom: 8,
-    borderRadius: 5,
-  },
-  selectedContractorItem: {
-    backgroundColor: '#0061FF',
-  },
-  contractorName: {
-    color: 'white',
-    fontSize: 16,
-  },
-  bottomSection: {
-    marginTop: 16,
-    paddingBottom: 16,
-  },
-  messageContainer: {
-    marginTop: 16,
-    marginBottom: 16,
-    paddingHorizontal: 8,
-  },
-  messageLabel: {
-    color: 'white',
-    fontSize: 16,
-    marginBottom: 8,
-  },
-  messageInput: {
-    backgroundColor: '#333333',
-    color: 'white',
-    borderRadius: 5,
-    padding: 12,
-    fontSize: 16,
-    minHeight: Platform.OS === 'ios' ? 80 : 100,
-    maxHeight: Platform.OS === 'ios' ? 100 : 120,
-    textAlignVertical: 'top',
-    textAlign: Platform.OS === 'ios' ? 'left' : 'left'
-  },
+  }, 
   buttonContainer: {
     position: 'absolute',
     bottom: 0,

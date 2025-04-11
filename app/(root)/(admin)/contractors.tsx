@@ -3,6 +3,7 @@ import { View, Text, FlatList, TouchableOpacity, Alert, StyleSheet } from 'react
 import { useGlobalContext } from '@/lib/global-provider';
 import { databases } from '@/lib/appwrite'; // Ensure you have the correct import for databases
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { globalStyles } from '@/styles/globalStyles';
 
 const AdminContractors = () => {
   const { user } = useGlobalContext();
@@ -73,16 +74,16 @@ const AdminContractors = () => {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>Contractors</Text>
+    <SafeAreaView style={globalStyles.container}>
+      <Text style={globalStyles.title}>Contractors</Text>
       {loading ? (
-        <Text style={styles.loadingText}>Loading...</Text>
+        <Text style={globalStyles.loadingText}>Loading...</Text>
       ) : (
         <FlatList
           data={contractors}
           keyExtractor={(item) => item.$id}
           renderItem={renderContractor}
-          contentContainerStyle={styles.listContainer}
+          contentContainerStyle={globalStyles.listContainer}
         />
       )}
     </SafeAreaView>
@@ -90,25 +91,6 @@ const AdminContractors = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: 'black',
-    padding: 16,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: 'white',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  loadingText: {
-    color: 'white',
-    textAlign: 'center',
-  },
-  listContainer: {
-    paddingBottom: 20,
-  },
   contractorItem: {
     backgroundColor: '#333',
     padding: 16,

@@ -1,6 +1,7 @@
-import { Text, type TextProps, StyleSheet } from 'react-native';
+import { Text, type TextProps, StyleSheet, Platform } from 'react-native';
 
 import { useThemeColor } from '@/hooks/useThemeColor';
+import { scaledSize } from '@/lib/textScaling';
 
 export type ThemedTextProps = TextProps & {
   lightColor?: string;
@@ -35,26 +36,26 @@ export function ThemedText({
 
 const styles = StyleSheet.create({
   default: {
-    fontSize: 16,
-    lineHeight: 24,
+    fontSize: scaledSize(Platform.OS === 'ios' ? 16 : 14),
+    lineHeight: scaledSize(Platform.OS === 'ios' ? 24 : 22),
   },
   defaultSemiBold: {
-    fontSize: 16,
-    lineHeight: 24,
+    fontSize: scaledSize(Platform.OS === 'ios' ? 16 : 14),
+    lineHeight: scaledSize(Platform.OS === 'ios' ? 24 : 22),
     fontWeight: '600',
   },
   title: {
-    fontSize: 32,
+    fontSize: scaledSize(Platform.select({ ios: 32, android: 28, default: 32 })),
     fontWeight: 'bold',
-    lineHeight: 32,
+    lineHeight: scaledSize(Platform.select({ ios: 32, android: 34, default: 32 })),
   },
   subtitle: {
-    fontSize: 20,
+    fontSize: scaledSize(Platform.select({ ios: 20, android: 18, default: 20 })),
     fontWeight: 'bold',
   },
   link: {
-    lineHeight: 30,
-    fontSize: 16,
+    lineHeight: scaledSize(Platform.select({ ios: 30, android: 28, default: 30 })),
+    fontSize: scaledSize(Platform.select({ ios: 16, android: 14, default: 16 })),
     color: '#0a7ea4',
   },
 });

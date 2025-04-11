@@ -5,11 +5,28 @@ import { ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Slot } from "expo-router";
 import userRole from "@/lib/appwrite";
+import { scaledSize } from '@/lib/textScaling';
+import { StyleSheet, useColorScheme } from 'react-native';
+
+const styles = StyleSheet.create({
+  headerTitle: {
+    fontSize: scaledSize(18),
+    color: '#ffffff',
+    fontWeight: '600',
+  },
+  headerBackground: {
+    backgroundColor: '#000000',
+  },
+  headerTintColor: {
+    color: '#ffffff',
+  }
+});
 
 export default function AppLayout() {
   const { refetch, user, loading, isLoggedIn } = useGlobalContext();
   //const { user, loading, isLoggedIn } = useGlobalContext();
   const router = useRouter();
+  const colorScheme = useColorScheme();
 
   useEffect(() => {
     if (!loading) {

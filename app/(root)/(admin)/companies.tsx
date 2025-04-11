@@ -13,6 +13,7 @@ import { databases } from '@/lib/appwrite';
 import { ID } from 'react-native-appwrite';
 import { config } from '@/constants/config';
 import CustomButton from '@/components/CustomButton';
+import { globalStyles } from '@/styles/globalStyles';
 
 const Companies = () => {
   const [companies, setCompanies] = useState([]);
@@ -91,20 +92,20 @@ const Companies = () => {
   };
 
   const renderCompany = ({ item }) => (
-    <View style={styles.companyItem}>
-      <Text style={styles.companyName}>{item.name}</Text>
-      <Text style={styles.companyDetails}>ABN: {item.abn}</Text>
+    <View style={globalStyles.companyItem}>
+      <Text style={globalStyles.companyName}>{item.name}</Text>
+      <Text style={globalStyles.companyDetails}>ABN: {item.abn}</Text>
       {item.bank_bsb && (
-        <Text style={styles.companyDetails}>BSB: {item.bank_bsb}</Text>
+        <Text style={globalStyles.companyDetails}>BSB: {item.bank_bsb}</Text>
       )}
       {item.bank_anumber && (
-        <Text style={styles.companyDetails}>Account: {item.bank_anumber}</Text>
+        <Text style={globalStyles.companyDetails}>Account: {item.bank_anumber}</Text>
       )}
     </View>
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={globalStyles.container}>
       <CustomButton
         title={showAddForm ? "Cancel" : "Add New Company"}
         handlePress={() => setShowAddForm(!showAddForm)}
@@ -114,7 +115,7 @@ const Companies = () => {
       {showAddForm && (
         <View style={styles.form}>
           <TextInput
-            style={styles.input}
+            style={globalStyles.input}
             placeholder="Company Name"
             placeholderTextColor="#666"
             value={newCompany.name}
@@ -122,7 +123,7 @@ const Companies = () => {
           />
           <TextInput
             style={[
-              styles.input,
+              globalStyles.input,
               newCompany.abn.length > 0 && newCompany.abn.length !== 11 && styles.inputError
             ]}
             placeholder="ABN"
@@ -139,14 +140,14 @@ const Companies = () => {
             maxLength={11}
           />
           <TextInput
-            style={styles.input}
+            style={globalStyles.input}
             placeholder="Bank BSB (Optional)"
             placeholderTextColor="#666"
             value={newCompany.bank_bsb}
             onChangeText={(text) => setNewCompany(prev => ({ ...prev, bank_bsb: text }))}
           />
           <TextInput
-            style={styles.input}
+            style={globalStyles.input}
             placeholder="Bank Account Number (Optional)"
             placeholderTextColor="#666"
             value={newCompany.bank_anumber}
@@ -162,13 +163,13 @@ const Companies = () => {
       )}
 
       {loading && !showAddForm ? (
-        <Text style={styles.loadingText}>Loading companies...</Text>
+        <Text style={globalStyles.loadingText}>Loading companies...</Text>
       ) : (
         <FlatList
           data={companies}
           renderItem={renderCompany}
           keyExtractor={(item) => item.$id}
-          contentContainerStyle={styles.listContainer}
+          contentContainerStyle={globalStyles.listContainer}
         />
       )}
     </SafeAreaView>
@@ -187,38 +188,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#222',
     borderRadius: 8,
   },
-  input: {
-    backgroundColor: '#333',
-    color: 'white',
-    padding: 12,
-    borderRadius: 6,
-    marginBottom: 12,
-    fontSize: 16,
-  },
-  listContainer: {
-    paddingBottom: 20,
-  },
-  companyItem: {
-    backgroundColor: '#333',
-    padding: 16,
-    marginBottom: 12,
-    borderRadius: 8,
-  },
-  companyName: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  companyDetails: {
-    color: '#ccc',
-    fontSize: 14,
-    marginBottom: 4,
-  },
-  loadingText: {
-    color: 'white',
-    textAlign: 'center',
-    fontSize: 16,
+  inputError: {
+    borderWidth: 1,
+    borderColor: '#F75555',
+    backgroundColor: '#461818',
   },
 });
 

@@ -19,6 +19,7 @@ import CustomButton from '@/components/CustomButton';
 import {config} from '@/constants/config';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import { globalStyles } from '@/styles/globalStyles';
 
 const Hour = () => {
   const [startDate, setStartDate] = useState(new Date());
@@ -29,7 +30,13 @@ const Hour = () => {
   const [loading, setLoading] = useState(false);
   const [expandedStart, setExpandedStart] = useState(false);
   const [expandedEnd, setExpandedEnd] = useState(false);
-  const [companies, setCompanies] = useState([]);
+  interface Company {
+    $id: string;
+    name: string;
+    abn?: string; // Add other properties as needed
+  }
+  
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [selectedCompanyId, setSelectedCompanyId] = useState('');
   const [showCompanyPicker, setShowCompanyPicker] = useState(false);
   const BILLER_INFO = {
@@ -344,16 +351,16 @@ const Hour = () => {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>View Contractors' Logged Hours</Text>
+    <SafeAreaView style={globalStyles.container}>
+      <Text style={globalStyles.title}>View Contractors' Logged Hours</Text>
       
       <TouchableOpacity 
-        style={styles.dateSection}
+        style={globalStyles.dateSection}
         onPress={() => setExpandedStart(!expandedStart)}
       >
-        <View style={styles.dateSectionHeader}>
-          <Text style={styles.dateLabel}>Start Date:</Text>
-          <Text style={styles.dateValue}>
+        <View style={globalStyles.dateSectionHeader}>
+          <Text style={globalStyles.dateLabel}>Start Date:</Text>
+          <Text style={globalStyles.dateValue}>
             {startDate.toLocaleDateString()}
           </Text>
         </View>
@@ -365,7 +372,7 @@ const Hour = () => {
     onChange={handleStartDateChange}
     maximumDate={new Date()}
     style={[
-      styles.datePicker,
+      globalStyles.datePicker,
       { height: 300 } // Increased height for inline calendar
     ]}
   />
@@ -373,12 +380,12 @@ const Hour = () => {
       </TouchableOpacity>
 
       <TouchableOpacity 
-        style={styles.dateSection}
+        style={globalStyles.dateSection}
         onPress={() => setExpandedEnd(!expandedEnd)}
       >
-        <View style={styles.dateSectionHeader}>
-          <Text style={styles.dateLabel}>End Date:</Text>
-          <Text style={styles.dateValue}>
+        <View style={globalStyles.dateSectionHeader}>
+          <Text style={globalStyles.dateLabel}>End Date:</Text>
+          <Text style={globalStyles.dateValue}>
             {endDate.toLocaleDateString()}
           </Text>
         </View>
@@ -390,7 +397,7 @@ const Hour = () => {
     onChange={handleEndDateChange}
     maximumDate={new Date()}
     style={[
-      styles.datePicker,
+      globalStyles.datePicker,
       { height: 300 } // Increased height for inline calendar
     ]}
   />
@@ -415,14 +422,14 @@ const Hour = () => {
       </View>
 
       {loading ? (
-        <Text style={styles.loadingText}>Loading...</Text>
+        <Text style={globalStyles.loadingText}>Loading...</Text>
       ) : (
         <FlatList
           data={loggedHours}
           keyExtractor={(item) => item.contractor.$id}
           renderItem={({ item }) => (
-            <View style={styles.contractorItem}>
-              <Text style={styles.contractorName}>{item.contractor.name}</Text>
+            <View style={globalStyles.contractorItem}>
+              <Text style={globalStyles.contractorName}>{item.contractor.name}</Text>
               {item.hours.length > 0 ? (
                 <>
                     {item.hours.map((log, index) => (
@@ -439,7 +446,7 @@ const Hour = () => {
               )}
     </View>
   )}
-  contentContainerStyle={styles.listContainer}
+  contentContainerStyle={globalStyles.listContainer}
 />
 
       )}
@@ -449,10 +456,10 @@ const Hour = () => {
         transparent={true}
         animationType="slide"
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Company</Text>
+        <View style={globalStyles.modalOverlay}>
+          <View style={globalStyles.modalContent}>
+            <View style={globalStyles.modalHeader}>
+              <Text style={globalStyles.modalTitle}>Select Company</Text>
               <TouchableOpacity 
                 onPress={() => setShowCompanyPicker(false)}
               >
@@ -483,45 +490,7 @@ const Hour = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: 'black',
-    padding: 16,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: 'white',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  datePickerContainer: {
-    marginBottom: 20,
-  },
-  dateText: {
-    color: 'white',
-    textAlign: 'center',
-    marginTop: 10,
-  },
-  loadingText: {
-    color: 'white',
-    textAlign: 'center',
-  },
-  listContainer: {
-    paddingBottom: 20,
-  },
-  contractorItem: {
-    backgroundColor: '#444',
-    padding: 16,
-    marginBottom: 10,
-    borderRadius: 8,
-  },
-  contractorName: {
-    color: 'white',
-    fontSize: 18,
-    marginBottom: 10,
-  },
+const styles = StyleSheet.create({ 
   logText: {
     color: 'white',
     fontSize: 16,
@@ -537,31 +506,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginTop: 10,
   },  
-  dateSection: {
-    backgroundColor: '#333',
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 16,
-  },
-  dateSectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  dateLabel: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  dateValue: {
-    color: '#0061ff',
-    fontSize: 16,
-  },
-  datePicker: {
-    marginTop: 10,
-    height: Platform.OS === 'ios' ? 120 : 40,
-    backgroundColor: '#444',
-  },
   companySelector: {
     backgroundColor: '#333',
     padding: 16,
@@ -581,30 +525,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 16,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: '#1c1c1e',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '70%',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#333',
-  },
-  modalTitle: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
   },
   closeButton: {
     color: '#0061ff',

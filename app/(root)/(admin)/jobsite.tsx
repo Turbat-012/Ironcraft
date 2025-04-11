@@ -19,6 +19,7 @@ import { databases} from '@/lib/appwrite';
 import { ID } from 'react-native-appwrite';
 import CustomButton from '@/components/CustomButton';
 import {config} from '@/constants/config';
+import { globalStyles } from '@/styles/globalStyles';
 
 const Jobsite = () => {
   const { user } = useGlobalContext();
@@ -137,10 +138,10 @@ const Jobsite = () => {
     return (
       <View>
         <TouchableOpacity 
-          style={styles.selectorButton}
+          style={globalStyles.selectorButton}
           onPress={() => setShowCompanyPicker(true)}
         >
-          <Text style={styles.selectorButtonText}>
+          <Text style={globalStyles.selectorButtonText}>
             {selectedCompany ? selectedCompany.name : 'Select a company...'}
           </Text>
         </TouchableOpacity>
@@ -150,31 +151,31 @@ const Jobsite = () => {
           transparent={true}
           animationType="slide"
         >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Select Company</Text>
+          <View style={globalStyles.modalOverlay}>
+            <View style={globalStyles.modalContent}>
+              <View style={globalStyles.modalHeader}>
+                <Text style={globalStyles.modalTitle}>Select Company</Text>
                 <TouchableOpacity 
                   onPress={() => setShowCompanyPicker(false)}
-                  style={styles.closeButton}
+                  style={globalStyles.closeButton}
                 >
-                  <Text style={styles.closeButtonText}>✕</Text>
+                  <Text style={globalStyles.closeButtonText}>✕</Text>
                 </TouchableOpacity>
               </View>
               
-              <ScrollView style={styles.companiesList}>
+              <ScrollView style={globalStyles.companiesList}>
                 {companies.map((company) => (
                   <TouchableOpacity
                     key={company.$id}
                     style={[
-                      styles.companyOption,
-                      company.$id === selectedCompanyId && styles.selectedCompanyOption
+                      globalStyles.companyOption,
+                      company.$id === selectedCompanyId && globalStyles.selectedCompanyOption
                     ]}
                     onPress={() => handleCompanySelect(company.$id)}
                   >
                     <Text style={[
-                      styles.companyOptionText,
-                      company.$id === selectedCompanyId && styles.selectedCompanyOptionText
+                      globalStyles.companyOptionText,
+                      company.$id === selectedCompanyId && globalStyles.selectedCompanyOptionText
                     ]}>
                       {company.name}
                     </Text>
@@ -190,20 +191,20 @@ const Jobsite = () => {
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <SafeAreaView style={styles.container}>
-        <Text style={styles.title}>Manage Jobsites</Text>
+      <SafeAreaView style={globalStyles.container}>
+        <Text style={globalStyles.title}>Manage Jobsites</Text>
         
         {renderCompanySelector()}
 
         <TextInput
-          style={styles.input}
+          style={globalStyles.input}
           value={jobsiteName}
           onChangeText={setJobsiteName}
           placeholder="Enter jobsite name"
           placeholderTextColor="#ffffff"
         />
         <TextInput
-          style={styles.input}
+          style={globalStyles.input}
           value={jobsiteAddress}
           onChangeText={setJobsiteAddress}
           placeholder="Enter jobsite address"
@@ -217,24 +218,24 @@ const Jobsite = () => {
           textStyles={undefined}
         />
         {loading ? (
-          <Text style={styles.loadingText}>Loading...</Text>
+          <Text style={globalStyles.loadingText}>Loading...</Text>
         ) : (
           <FlatList
             data={jobsites}
             keyExtractor={(item) => item.$id}
             renderItem={({ item }) => (
-              <View style={styles.jobsiteItem}>
+              <View style={globalStyles.jobsiteItem}>
                 <View>
-                  <Text style={styles.jobsiteName}>{item.name}</Text>
-                  <Text style={styles.jobsiteAddress}>{item.address}</Text>
-                  <Text style={styles.companyName}>
+                  <Text style={globalStyles.jobsiteName}>{item.name}</Text>
+                  <Text style={globalStyles.jobsiteAddress}>{item.address}</Text>
+                  <Text style={globalStyles.companyName}>
                     {companies.find(c => c.$id === item.companies_id)?.name || 'Unknown Company'}
                   </Text>
                 </View>
                 <Button title="Delete" onPress={() => handleDeleteJobsite(item.$id)} />
               </View>
             )}
-            contentContainerStyle={styles.listContainer}
+            contentContainerStyle={globalStyles.listContainer}
           />
         )}
       </SafeAreaView>
@@ -243,49 +244,6 @@ const Jobsite = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: 'black',
-    padding: 16,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: 'white',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  input: {
-    backgroundColor: '#333',
-    color: 'white',
-    padding: 10,
-    marginBottom: 10,
-    borderRadius: 5,
-  },
-  loadingText: {
-    color: 'white',
-    textAlign: 'center',
-  },
-  listContainer: {
-    paddingBottom: 20,
-  },
-  jobsiteItem: {
-    backgroundColor: '#444',
-    padding: 16,
-    marginBottom: 10,
-    borderRadius: 8,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  jobsiteName: {
-    color: 'white',
-    fontSize: 18,
-  },
-  jobsiteAddress: {
-    color: 'white',
-    fontSize: 14,
-  },
   pickerContainer: {
     backgroundColor: '#333',
     borderRadius: 5,
@@ -295,70 +253,6 @@ const styles = StyleSheet.create({
   picker: {
     color: 'white',
     backgroundColor: 'transparent',
-  },
-  companyName: {
-    color: '#aaa',
-    fontSize: 12,
-    marginTop: 4,
-  },
-  selectorButton: {
-    backgroundColor: '#333',
-    padding: 15,
-    borderRadius: 8,
-    marginBottom: 16,
-  },
-  selectorButtonText: {
-    color: 'white',
-    fontSize: 16,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: '#1c1c1e',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '70%',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#333',
-  },
-  modalTitle: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  closeButton: {
-    padding: 8,
-  },
-  closeButtonText: {
-    color: '#007AFF',
-    fontSize: 20,
-  },
-  companiesList: {
-    padding: 16,
-  },
-  companyOption: {
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 8,
-  },
-  selectedCompanyOption: {
-    backgroundColor: '#0A84FF',
-  },
-  companyOptionText: {
-    color: 'white',
-    fontSize: 16,
-  },
-  selectedCompanyOptionText: {
-    fontWeight: 'bold',
   },
 });
 

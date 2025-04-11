@@ -9,6 +9,7 @@ import CustomButton from '@/components/CustomButton';
 import { Query } from 'react-native-appwrite';
 import { config } from '@/constants/config';
 import { generateInvoice } from '@/lib/invoice_utility';
+import { globalStyles } from '@/styles/globalStyles';
 
 const Hours = () => {
   const { user } = useGlobalContext();
@@ -125,10 +126,10 @@ const Hours = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={globalStyles.container}>
       <View style={styles.innerContainer}>
-        <Text style={styles.title}>View Logged Hours</Text>
-        <View style={styles.datePickerContainer}>
+        <Text style={globalStyles.title}>View Logged Hours</Text>
+        <View style={globalStyles.datePickerContainer}>
           <Button title="Choose Start Date" onPress={() => setShowStartDatePicker(true)} />
           <Text style={styles.dateText}>{startDate.toDateString()}</Text>
         </View>
@@ -141,7 +142,7 @@ const Hours = () => {
             maximumDate={new Date()}
           />
         )}
-        <View style={styles.datePickerContainer}>
+        <View style={globalStyles.datePickerContainer}>
           <Button title="Choose End Date" onPress={() => setShowEndDatePicker(true)} />
           <Text style={styles.dateText}>{endDate.toDateString()}</Text>
         </View>
@@ -208,35 +209,11 @@ const Hours = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 16,
-    backgroundColor: '#000000',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 16,
-    color: 'white',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    padding: 10,
-    borderRadius: 5,
-    marginBottom: 16,
-  },
   innerContainer: {
     width: '100%',
     justifyContent: 'center',
     paddingHorizontal: 16,
     marginVertical: 24,
-  },
-  datePickerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-    color: ''
   },
   dateText: {
     marginLeft: 10,
@@ -279,22 +256,6 @@ const styles = StyleSheet.create({
   dailyPayText: {
     fontSize: 16,
     color: '#4CAF50',
-  },
-  inputContainer: {
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 16,
-    marginBottom: 8,
-    color: 'white',
-  },
-  input: {
-    backgroundColor: '#1e1e1e',
-    borderWidth: 1,
-    borderColor: '#333',
-    padding: 10,
-    borderRadius: 5,
-    color: 'white',
   },
 });
 
