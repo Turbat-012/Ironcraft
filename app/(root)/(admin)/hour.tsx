@@ -412,12 +412,14 @@ const Hour = () => {
           handlePress={fetchLoggedHours}
           containerStyles="mb-4 bg-blue-500"
           isLoading={loading}
+          textStyles={undefined}
         />
         <CustomButton 
           title="Generate Invoice"
           handlePress={generateInvoice}
           containerStyles="bg-green-500"
           isLoading={loading}
+          textStyles={undefined}
         />
       </View>
 

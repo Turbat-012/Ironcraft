@@ -6,10 +6,22 @@ import { ID, Query } from 'react-native-appwrite';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import {config} from '@/constants/config';
+import { globalStyles } from '@/styles/globalStyles';
 
 const Index = () => {
   const { user, loading } = useGlobalContext();
-  const [assignments, setAssignments] = useState([]);
+  interface Assignment {
+    $id: string;
+    date: string;
+    job_site_id: string;
+    message?: string;
+    jobsite: {
+      name: string;
+      address: string;
+    };
+  }
+
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loadingAssignments, setLoadingAssignments] = useState(true);
 
   useEffect(() => {
@@ -78,29 +90,29 @@ const Index = () => {
 
   if (loading || loadingAssignments) {
     return (
-      <View style={styles.container}>
+      <View style={globalStyles.container}>
         <ActivityIndicator size="large" color="#0000ff" />
       </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>Upcoming Assignments</Text>
+    <SafeAreaView style={globalStyles.container}>
+      <Text style={globalStyles.title}>Upcoming Assignments</Text>
 
       {assignments.length > 0 ? (
         <FlatList
           data={assignments}
           renderItem={({ item }) => (
             <View style={styles.assignmentItem}>
-              <Text style={styles.jobsiteName}>{item.jobsite.name}</Text>
+              <Text style={globalStyles.jobsiteName}>{item.jobsite.name}</Text>
               <Text style={styles.addressText}>{item.jobsite.address}</Text>
               <Text style={styles.assignmentDate}>
                 {new Date(item.date).toLocaleDateString()}
               </Text>
               {item.message && (
-                <View style={styles.messageContainer}>
-                  <Text style={styles.messageLabel}>Message:</Text>
+                <View style={globalStyles.messageContainer}>
+                  <Text style={globalStyles.messageLabel}>Message:</Text>
                   <Text style={styles.messageText}>{item.message}</Text>
                 </View>
               )}
@@ -117,17 +129,6 @@ const Index = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#000000',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#ffffff',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
   assignmentItem: {
     padding: 16,
     backgroundColor: '#1e1e1e',
@@ -140,35 +141,16 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     fontWeight: 'bold',
   },
-  jobsiteText: {
-    fontSize: 18,
-    color: '#ffffff',
-  },
   noAssignmentsText: {
     fontSize: 16,
     color: '#ffffff',
     textAlign: 'center',
-  },
-  jobsiteName: {
-    fontSize: 18,
-    color: '#ffffff',
   },
   assignmentDate: {
     fontSize: 16,
     color: '#4CAF50',
     marginBottom: 4,
     fontWeight: 'bold',
-  },
-  messageContainer: {
-    marginTop: 8,
-    padding: 8,
-    backgroundColor: '#444',
-    borderRadius: 4,
-  },
-  messageLabel: {
-    color: '#ccc',
-    fontSize: 12,
-    marginBottom: 4,
   },
   messageText: {
     color: 'white',

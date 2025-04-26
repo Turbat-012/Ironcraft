@@ -12,6 +12,12 @@ import { Picker } from '@react-native-picker/picker';
 import { scaledSize } from '@/lib/textScaling';
 import { globalStyles } from '@/styles/globalStyles';
 
+interface Jobsite {
+  id: string;
+  name: string;
+  companies_id: string;
+}
+
 const Logging = () => {
   const { user } = useGlobalContext();
   const [hours, setHours] = useState('');
@@ -20,8 +26,8 @@ const Logging = () => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hourlyRate, setHourlyRate] = useState('');
-  const [assignedJobsite, setAssignedJobsite] = useState<{ id: string; name: string } | null>(null);
-  const [jobsites, setJobsites] = useState<Array<{ id: string; name: string }>>([]);
+  const [assignedJobsite, setAssignedJobsite] = useState<Jobsite | null>(null);
+  const [jobsites, setJobsites] = useState<Jobsite[]>([]);
   const [manualJobsiteId, setManualJobsiteId] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -37,7 +43,6 @@ const Logging = () => {
     setHourlyRate(text);
   };
 
-  // Modify the fetchJobsiteForDate function to not show errors for unassigned dates
   const fetchJobsiteForDate = async (selectedDate: Date) => {
     try {
       const dateString = selectedDate.toISOString().split('T')[0];
@@ -65,13 +70,13 @@ const Logging = () => {
         if (jobsite) {
           setAssignedJobsite({
             id: jobsite.$id,
-            name: jobsite.name
+            name: jobsite.name,
+            companies_id: jobsite.companies_id // Add companies_id
           });
         } else {
           setAssignedJobsite(null);
         }
       } else {
-        // Simply clear the assigned jobsite without showing an error
         setAssignedJobsite(null);
       }
     } catch (error) {
@@ -89,7 +94,8 @@ const Logging = () => {
       );
       const formattedJobsites = response.documents.map(doc => ({
         id: doc.$id,
-        name: doc.name
+        name: doc.name,
+        companies_id: doc.companies_id // Add companies_id
       }));
       setJobsites(formattedJobsites);
       if (formattedJobsites.length > 0) {
@@ -167,13 +173,22 @@ const Logging = () => {
         );
       }
   
-      // Create new record
-      const response = await logHours(
-        user.$id,
-        totalHours,
-        formattedDate,
-        rate,
-        selectedJobsite.id
+      // Create new record with companies_id
+      const hoursData = {
+        contractor_id: user.$id,
+        hours: totalHours,
+        date: formattedDate,
+        hourly_rate: rate,
+        job_site_id: selectedJobsite.id,
+        companies_id: selectedJobsite.companies_id, // Add companies_id
+        pay: totalHours * rate
+      };
+  
+      const response = await databases.createDocument(
+        config.databaseId!,
+        config.hoursCollectionId!,
+        ID.unique(),
+        hoursData
       );
   
       Alert.alert(

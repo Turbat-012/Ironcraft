@@ -18,14 +18,14 @@ const FormField = ({title, value, placeholder, handleChangeText, otherStyles, ..
       <View className='border-2 border-primary-200 w-full rounded-2xl focus:border-orange items-center flex-row' 
         style={{ height: inputHeight, paddingHorizontal: SCREEN_WIDTH * 0.04 }}>
         <TextInput
-            className='flex-1 mb-2 text-black font-rubik-medium items-center'
+            className='flex-1 mb-2 text-white font-rubik-medium items-center'
             style={{ 
               height: inputHeight,
               fontSize: scaledSize(16)
             }}
             value={value}
             placeholder={placeholder}
-            placeholderTextColor={'#Ffffff'}
+            placeholderTextColor={'#ffffff'}
             onChangeText={handleChangeText}
             secureTextEntry={title==="Password" && !showPassword}
             allowFontScaling={false}
