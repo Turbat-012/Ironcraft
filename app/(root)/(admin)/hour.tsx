@@ -140,24 +140,24 @@ const Hour = () => {
       Alert.alert('Error', 'Please select a company first');
       return;
     }
-
+  
     setLoading(true);
     try {
       const company = companies.find(c => c.$id === selectedCompanyId);
       const startDateString = startDate.toISOString().split('T')[0];
       const endDateString = endDate.toISOString().split('T')[0];
-
-      // Get all jobsites for the selected company
+  
+      // Get all hours for the company's jobsites
       const jobsitesResponse = await databases.listDocuments(
         config.databaseId!,
         config.jobsiteCollectionId!,
         [Query.equal('companies_id', selectedCompanyId)]
       );
-
+  
       let totalAmount = 0;
-      const jobsiteData = [];
-
-      // For each jobsite, get contractors and their hours
+      const allHours = [];
+  
+      // Collect all hours without grouping by jobsite
       for (const jobsite of jobsitesResponse.documents) {
         const hoursResponse = await databases.listDocuments(
           config.databaseId!,
@@ -168,24 +168,24 @@ const Hour = () => {
             Query.equal('job_site_id', jobsite.$id)
           ]
         );
-
-        if (hoursResponse.documents.length > 0) {
-          const jobsiteHours = {
-            name: jobsite.name,
-            hours: hoursResponse.documents.map(hour => ({
-              date: new Date(hour.date).toLocaleDateString(),
-              contractorName: hour.contractor_name,
-              hours: hour.hours,
-              rate: hour.hourly_rate,
-              amount: hour.pay
-            }))
-          };
-
-          totalAmount += jobsiteHours.hours.reduce((sum, h) => sum + h.amount, 0);
-          jobsiteData.push(jobsiteHours);
-        }
+  
+        const hours = hoursResponse.documents.map(hour => ({
+          date: new Date(hour.date).toLocaleDateString(),
+          contractorName: hour.contractor_name,
+          hours: hour.hours,
+          rate: hour.hourly_rate,
+          amount: hour.pay
+        }));
+  
+        allHours.push(...hours);
       }
-
+  
+      // Sort all hours by date
+      allHours.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  
+      // Calculate total amount
+      totalAmount = allHours.reduce((sum, h) => sum + h.amount, 0);
+  
       const htmlContent = `
         <!DOCTYPE html>
         <html>
@@ -231,7 +231,6 @@ const Hour = () => {
               margin: 5px 0;
               color: #444;
             }
-            .jobsite { margin-bottom: 30px; }
             table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
             th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
             th { background-color: #f2f2f2; }
@@ -275,61 +274,56 @@ const Hour = () => {
               </div>
             </div>
           </div>
-
+  
           <div class="company-info">
             <h2>Bill To:</h2>
             <p><strong>${company.name}</strong></p>
             <p>ABN: ${company.abn}</p>
             <p><strong>Invoice Period:</strong> ${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}</p>
           </div>
-
-          ${jobsiteData.map(jobsite => `
-            <div class="jobsite">
-              <h3>${jobsite.name}</h3>
-              <table>
-                <tr>
-                  <th>Date</th>
-                  <th>Contractor</th>
-                  <th>Hours</th>
-                  <th>Rate</th>
-                  <th>Amount</th>
-                </tr>
-                ${jobsite.hours.map(hour => `
-                  <tr>
-                    <td>${hour.date}</td>
-                    <td>${hour.contractorName}</td>
-                    <td>${hour.hours}</td>
-                    <td>$${hour.rate}</td>
-                    <td>$${hour.amount.toFixed(2)}</td>
-                  </tr>
-                `).join('')}
-              </table>
-            </div>
-          `).join('')}
-
+  
+          <table>
+            <tr>
+              <th>Date</th>
+              <th>Contractor</th>
+              <th>Hours</th>
+              <th>Rate</th>
+              <th>Amount</th>
+            </tr>
+            ${allHours.map(hour => `
+              <tr>
+                <td>${hour.date}</td>
+                <td>${hour.contractorName}</td>
+                <td>${hour.hours}</td>
+                <td>$${hour.rate}</td>
+                <td>$${hour.amount.toFixed(2)}</td>
+              </tr>
+            `).join('')}
+          </table>
+  
           <div class="payment-info">
             <h2>Payment Information</h2>
             <p><strong>BSB:</strong> ${BILLER_INFO.bsb}</p>
             <p><strong>Account Number:</strong> ${BILLER_INFO.account}</p>
           </div>
-
+  
           <div class="total">
             <h3>Total Amount: $${totalAmount.toFixed(2)}</h3>
           </div>
         </body>
         </html>
       `;
-
+  
       const { uri } = await Print.printToFileAsync({
         html: htmlContent,
         base64: false
       });
-
+  
       await Sharing.shareAsync(uri, {
         UTI: '.pdf',
         mimeType: 'application/pdf'
       });
-
+  
     } catch (error) {
       console.error('Error generating invoice:', error);
       Alert.alert('Error', 'Failed to generate invoice');
