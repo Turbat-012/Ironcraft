@@ -132,7 +132,7 @@ const Assign = () => {
 
   const handleEditJobsite = (jobsiteId: string) => {
     router.push({
-      pathname: '/EditJobsite',
+      pathname: '/(admin)/EditJobsite',
       params: { jobsiteId }
     });
   };

@@ -5,7 +5,7 @@ import { databases } from '@/lib/appwrite'; // Ensure you have the correct impor
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { globalStyles } from '@/styles/globalStyles';
 
-const AdminContractors = () => {
+const Contractors = () => {
   const { user } = useGlobalContext();
   const [contractors, setContractors] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -247,4 +247,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default AdminContractors;
+export default Contractors;

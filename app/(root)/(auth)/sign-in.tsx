@@ -92,8 +92,8 @@ const SignIn = () => {
             </ScrollView>
         </SafeAreaView>
     );
-    }
+    };
 
-export default SignIn
+export default SignIn;
 
 //<Image source={images.onboarding} className="w-full h-4/6"  resizeMode="contain" />

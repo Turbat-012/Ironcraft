@@ -131,7 +131,7 @@ const Companies = () => {
             value={newCompany.abn}
             onChangeText={(text) => {
               // Only allow digits
-              const numbersOnly = text.replace(/[^0-9]/g, '');
+              const numbersOnly = (text ?? '').replace(/[^0-9]/g, '');
               // Limit to 11 characters
               const limited = numbersOnly.slice(0, 11);
               setNewCompany(prev => ({ ...prev, abn: limited }));

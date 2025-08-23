@@ -124,6 +124,6 @@ const TabsLayout = () => {
         />
     </Tabs>    
   )
-}
+};
 
-export default TabsLayout
+export default TabsLayout;

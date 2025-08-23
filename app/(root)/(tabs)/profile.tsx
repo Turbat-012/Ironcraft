@@ -93,7 +93,7 @@ const ViewProfileModal = React.memo(({
                 <TextInput
                     value={formValues.abn}
                     onChangeText={(text) => {
-                        const numbersOnly = text.replace(/[^0-9]/g, '');
+                        const numbersOnly = (text ?? '').replace(/[^0-9]/g, '');
                         setFormValues(prev => ({ ...prev, abn: numbersOnly }));
                     }}
                     className="bg-[#2d2d2d] text-white p-3 rounded-lg mb-6"
@@ -143,7 +143,7 @@ const PaymentDetailsModal = React.memo(({
                 <TextInput
                     value={formValues.bsb}
                     onChangeText={(text) => {
-                        const numbersOnly = text.replace(/[^0-9]/g, '');
+                        const numbersOnly = (text ?? '').replace(/[^0-9]/g, '');
                         setFormValues(prev => ({ ...prev, bsb: numbersOnly }));
                     }}
                     className="bg-[#2d2d2d] text-white p-3 rounded-lg mb-4"
@@ -156,7 +156,7 @@ const PaymentDetailsModal = React.memo(({
                 <TextInput
                     value={formValues.accountNumber}
                     onChangeText={(text) => {
-                        const numbersOnly = text.replace(/[^0-9]/g, '');
+                        const numbersOnly = (text ?? '').replace(/[^0-9]/g, '');
                         setFormValues(prev => ({ ...prev, accountNumber: numbersOnly }));
                     }}
                     className="bg-[#2d2d2d] text-white p-3 rounded-lg mb-6"
@@ -429,5 +429,6 @@ const Profile = () => {
             </ScrollView>
         </SafeAreaView>
     )
-}
-export default Profile
+};
+
+export default Profile;

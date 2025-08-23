@@ -30,6 +30,6 @@ const AuthLayout = () => {
         <StatusBar backgroundColor='primary-300' style="auto" />
     </>
   )
-}
+};
 
-export default AuthLayout
+export default AuthLayout;

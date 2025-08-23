@@ -24,7 +24,7 @@ const SettingsItem = ({icon, title, onPress, showArrow=false, textStyle}: Settin
     </TouchableOpacity>
 )
 
-const aProfile = () => {
+const aprofile = () => {
     const { user, refetch} = useGlobalContext();
 
     
@@ -62,5 +62,6 @@ const aProfile = () => {
             </ScrollView>
         </SafeAreaView>
     )
-}
-export default aProfile
+};
+
+export default aprofile;

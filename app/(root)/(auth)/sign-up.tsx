@@ -89,8 +89,8 @@ const SignUp = () => {
             </ScrollView>
         </SafeAreaView>
     );
-    }
+};
 
-export default SignUp
+export default SignUp;
 
 //<Image source={images.onboarding} className="w-full h-4/6"  resizeMode="contain" />

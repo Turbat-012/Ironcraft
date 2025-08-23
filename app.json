@@ -22,8 +22,7 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#000000"
       },
-      "package": "com.jsm.ironcraft",
-      "googleServicesFile": "./google-services.json"
+      "package": "com.jsm.ironcraft"
     },
     "web": {
       "bundler": "metro",
