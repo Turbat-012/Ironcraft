@@ -18,6 +18,16 @@ import { config } from "@/constants/config";
 
 export const client = new Client();
 
+if (!config.endpoint) {
+  throw new Error("Appwrite config endpoit are missing. Check your .env or config file.");
+};
+if (!config.projectId) {
+  throw new Error("Appwrite config project are missing. Check your .env or config file.");
+};
+if (!config.platform) {
+  throw new Error("Appwrite config platform are missing. Check your .env or config file.");
+};
+
 client
     .setEndpoint(config.endpoint!)
     .setProject(config.projectId!)
